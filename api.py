@@ -3,33 +3,29 @@ LynqEstate — Prediction API
 Run with: uvicorn api:app --reload
 Docs at:  http://localhost:8000/docs
 """
- 
+
 import joblib
+import lightgbm as lgb
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
- 
+
 # ── Load all three models at startup ─────────────────────────────────────────
-MODEL_PATHS = {
-    "unifamilial": "lynq_model_unifamilial.pkl",
-    "condo":       "lynq_model_condo.pkl",
-    "plex":        "lynq_model_plex.pkl",
-}
- 
 MODELS = {}
-for pt, path in MODEL_PATHS.items():
+for pt in ["unifamilial", "condo", "plex"]:
     try:
-        data = joblib.load(path)
+        model = lgb.Booster(model_file=f"lynq_model_{pt}.lgb")
+        pkl_data = joblib.load(f"lynq_model_{pt}.pkl")
         MODELS[pt] = {
-            "model":    data["model"],
-            "imputer":  data["imputer"],
-            "features": data["features"],
+            "model":    model,
+            "imputer":  pkl_data["imputer"],
+            "features": pkl_data["features"],
         }
-        print(f"✓ {pt} model loaded — {len(data['features'])} features")
-    except FileNotFoundError:
-        raise RuntimeError(f"{path} not found. Run lynq_model.py first.")
+        print(f"✓ {pt} model loaded — {len(pkl_data['features'])} features")
+    except Exception as e:
+        raise RuntimeError(f"Failed to load {pt} model: {e}")
  
 # ── Confidence margins per model — based on actual MAPE ──────────────────────
 # Condo is tighter (8.72% MAPE), plex is wider (17% MAPE)
@@ -224,7 +220,7 @@ def predict(prop: PropertyInput):
     X_imputed = pd.DataFrame(imputer.transform(X), columns=X.columns)
  
     # Predict
-    raw_prediction = model.predict(X_imputed)[0]
+    raw_prediction = model.predict(X_imputed.values)[0]
     estimate = int(round(raw_prediction / 1000) * 1000)
  
     # Per-model confidence margin
