@@ -4,8 +4,6 @@ __pycache__/
 venv/
 *.egg-info/
 
-# Trained models — large binary files
-*.pkl
 
 # Raw data — too large and potentially sensitive
 *.csv
