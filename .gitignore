@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+*.egg-info/
+
+# Trained models — large binary files
+*.pkl
+
+# Raw data — too large and potentially sensitive
+*.csv
+montreal_checkpoint.txt
+trois_rivieres_checkpoint.txt
+
+# Diagnostic scripts — not needed publicly
+plex_diag.py
+unifamilial_diag.py
+
+# Data collector — keep private
+collector.py
+safety_collector.py
+
+# Misc
+.DS_Store
+*.png
