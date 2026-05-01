@@ -75,6 +75,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://lynq-estate.vercel.app",
+        "https://lynqestate.com",
+        "https://www.lynqestate.com",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
