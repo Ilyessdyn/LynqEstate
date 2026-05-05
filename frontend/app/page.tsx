@@ -53,7 +53,7 @@ export default function Home() {
           margin: '0 auto',
           lineHeight: 1.65,
         }}>
-          Instant price estimate powered by 200,000+ real Montréal/Laval transactions.
+          Instant price estimate powered by 200,000+ real Greater Montreal transactions.
           
         </p>
       </header>

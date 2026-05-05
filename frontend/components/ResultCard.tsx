@@ -98,7 +98,7 @@ export default function ResultCard({ result, onReset }: Props) {
         <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Data source</p>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Real Montréal/Laval transactions</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Real Greater Montreal transactions</p>
           </div>
           <div style={{ width: 1, background: 'var(--border-subtle)' }} />
           <div style={{ textAlign: 'center' }}>
