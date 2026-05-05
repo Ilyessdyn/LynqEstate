@@ -1,7 +1,7 @@
 # LynqEstate
  
 **ML-powered real estate valuation for Greater Montréal and Laval.**  
-Instant price estimates based on 200,000+ real transactions. No agent. No commitment.
+Instant price estimates based on 200,000+ real transactions.
  
 🌐 **Live at [lynqestate.com](https://lynqestate.com)**
  
@@ -9,7 +9,7 @@ Instant price estimates based on 200,000+ real transactions. No agent. No commit
  
 ## What it does
  
-LynqEstate lets anyone estimate the market value of a property in the Greater Montréal area in under 60 seconds. Enter an address, fill in a few property details, and get an ML-powered estimate with a confidence range — no realtor, no waiting.
+LynqEstate lets anyone estimate the market value of a property in the Greater Montréal area in under 60 seconds. Enter an address, fill in a few property details, and get an ML-powered estimate with a confidence range.
  
 ---
  
