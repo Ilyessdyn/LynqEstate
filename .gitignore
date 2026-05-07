@@ -6,7 +6,7 @@ venv/
 
 
 # Raw data — too large and potentially sensitive
-*.csv
+
 montreal_checkpoint.txt
 trois_rivieres_checkpoint.txt
 
