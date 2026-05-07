@@ -1,38 +1,44 @@
+import Link from 'next/link'
 import PropertyForm from '../components/PropertyForm'
 
 export default function Home() {
   return (
     <main style={{
       minHeight: '100vh',
-      padding: '60px 24px 100px',
+      padding: '0 0 100px',
       position: 'relative',
       zIndex: 1,
     }}>
-      {/* Header */}
-      <header style={{ textAlign: 'center', marginBottom: 56 }}>
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 28,
-        }}>
-          {/* Logo mark */}
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <rect width="28" height="28" rx="7" fill="#1D9E75" fillOpacity="0.15"/>
-            <path d="M8 18L14 10L20 18" stroke="#1D9E75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M11 18L14 14L17 18" stroke="#1D9E75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fillOpacity="0.5"/>
-          </svg>
-          <span style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: 18,
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-            letterSpacing: '0.01em',
-          }}>
-            LynqEstate
-          </span>
-        </div>
 
+      {/* ── NAV ── */}
+      <nav style={{
+        background: '#f5f0e8',
+        padding: '16px 40px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottom: '0.5px solid rgba(29,158,117,0.2)',
+        marginBottom: 60,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 500, color: '#1a2420' }}>
+          <div style={{ width: 24, height: 24, background: '#1D9E75', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1L13 12H1L7 1Z" fill="white" fillOpacity="0.9" />
+            </svg>
+          </div>
+          LynqEstate
+        </div>
+        <div style={{ display: 'flex', gap: 24 }}>
+          <Link href="/" style={{ fontSize: 13, color: '#1D9E75', fontWeight: 500, textDecoration: 'none' }}>Estimate</Link>
+          <Link href="/market" style={{ fontSize: 13, color: 'rgba(26,36,32,0.6)', textDecoration: 'none' }}>Market</Link>
+        </div>
+        <Link href="/market" style={{ background: '#1D9E75', color: '#fff', fontSize: 13, padding: '8px 18px', borderRadius: 8, textDecoration: 'none' }}>
+          Market data →
+        </Link>
+      </nav>
+
+      {/* Header */}
+      <header style={{ textAlign: 'center', marginBottom: 56, padding: '0 24px' }}>
         <h1 style={{
           fontFamily: "'Playfair Display', serif",
           fontSize: 'clamp(32px, 5vw, 48px)',
@@ -54,12 +60,11 @@ export default function Home() {
           lineHeight: 1.65,
         }}>
           Instant price estimate powered by 200,000+ real Greater Montreal transactions.
-          
         </p>
       </header>
 
       {/* Form card */}
-      <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <div style={{ maxWidth: 560, margin: '0 auto', padding: '0 24px' }}>
         <div className="card" style={{ padding: '36px 32px' }}>
           <PropertyForm />
         </div>

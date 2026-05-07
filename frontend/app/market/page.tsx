@@ -46,6 +46,18 @@ interface VolumeRow {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? ''
 
+// ── Capitalize city names ─────────────────────────────────────────────────────
+function capitalizeCity(city: string): string {
+  return city
+    .split(' ')
+    .map(word =>
+      word.split('-')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join('-')
+    )
+    .join(' ')
+}
+
 function fmt(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
   if (n >= 1_000) return `$${Math.round(n / 1000)}K`
@@ -85,82 +97,53 @@ function Sparkline({ data }: { data: TrendPoint[] }) {
   const points = data.map((d, i) => `${px(i)},${py(d.median)}`).join(' ')
   const areaPoints = `${PL},${PT + chartH} ` + points + ` ${px(data.length - 1)},${PT + chartH}`
 
-  // Tick labels — show every 6 months
   const ticks = data.filter((_, i) => i % 6 === 0 || i === data.length - 1)
-
-  // Y axis labels
   const yLabels = [minP, (minP + maxP) / 2, maxP]
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
-      {/* Area fill */}
       <defs>
         <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#1D9E75" stopOpacity="0.18" />
           <stop offset="100%" stopColor="#1D9E75" stopOpacity="0" />
         </linearGradient>
       </defs>
-
-      {/* Grid lines */}
       {yLabels.map((p, i) => (
         <g key={i}>
-          <line
-            x1={PL} y1={py(p)} x2={W - PR} y2={py(p)}
-            stroke="rgba(26,36,32,0.08)" strokeWidth="0.5" strokeDasharray="4 4"
-          />
-          <text x={PL - 6} y={py(p) + 4} fontSize="9" fill="rgba(26,36,32,0.45)" textAnchor="end">
-            {fmt(p)}
-          </text>
+          <line x1={PL} y1={py(p)} x2={W - PR} y2={py(p)} stroke="rgba(26,36,32,0.08)" strokeWidth="0.5" strokeDasharray="4 4" />
+          <text x={PL - 6} y={py(p) + 4} fontSize="9" fill="rgba(26,36,32,0.45)" textAnchor="end">{fmt(p)}</text>
         </g>
       ))}
-
-      {/* Area */}
       <polygon points={areaPoints} fill="url(#areaFill)" />
-
-      {/* Line */}
       <polyline points={points} fill="none" stroke="#1D9E75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-
-      {/* End dot */}
       <circle cx={px(data.length - 1)} cy={py(data[data.length - 1].median)} r="4" fill="#1D9E75" />
-
-      {/* X axis ticks */}
       {ticks.map((d, i) => (
-        <text key={i} x={px(data.indexOf(d))} y={H - 4} fontSize="9" fill="rgba(26,36,32,0.4)" textAnchor="middle">
-          {d.label}
-        </text>
+        <text key={i} x={px(data.indexOf(d))} y={H - 4} fontSize="9" fill="rgba(26,36,32,0.4)" textAnchor="middle">{d.label}</text>
       ))}
-
-      {/* X axis line */}
       <line x1={PL} y1={PT + chartH} x2={W - PR} y2={PT + chartH} stroke="rgba(26,36,32,0.1)" strokeWidth="0.5" />
     </svg>
   )
 }
 
-// ── Volume bar chart (SVG) ─────────────────────────────────────────────────────
+// ── Volume bar chart (SVG) ────────────────────────────────────────────────────
 function VolumeChart({ data }: { data: VolumeRow[] }) {
   if (!data.length) return null
   const maxCount = Math.max(...data.map(d => d.count))
   const W = 640, H = 100, PB = 20
   const barW = (W / data.length) * 0.55
-  const gap   = W / data.length
+  const gap = W / data.length
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
       {data.map((d, i) => {
         const barH = ((d.count / maxCount) * (H - PB - 8))
-        const x    = i * gap + gap / 2 - barW / 2
-        const y    = H - PB - barH
+        const x = i * gap + gap / 2 - barW / 2
+        const y = H - PB - barH
         const peak = d.count === maxCount
         return (
           <g key={i}>
-            <rect
-              x={x} y={y} width={barW} height={barH}
-              rx="3"
-              fill={peak ? '#1D9E75' : 'rgba(29,158,117,0.2)'}
-            />
-            <text x={x + barW / 2} y={H - 4} fontSize="9" fill="rgba(26,36,32,0.45)" textAnchor="middle">
-              {d.label}
-            </text>
+            <rect x={x} y={y} width={barW} height={barH} rx="3" fill={peak ? '#1D9E75' : 'rgba(29,158,117,0.2)'} />
+            <text x={x + barW / 2} y={H - 4} fontSize="9" fill="rgba(26,36,32,0.45)" textAnchor="middle">{d.label}</text>
           </g>
         )
       })}
@@ -169,15 +152,15 @@ function VolumeChart({ data }: { data: VolumeRow[] }) {
 }
 
 // ── Colour tier for heatmap ───────────────────────────────────────────────────
-function heatColour(rank: number, total: number): { bg: string; text: string; sub: string } {
+function heatColour(rank: number, total: number): { bg: string; text: string } {
   const pct = rank / total
-  if (pct < 0.15) return { bg: '#085041', text: '#fff',             sub: 'rgba(255,255,255,0.7)' }
-  if (pct < 0.30) return { bg: '#0F6E56', text: '#fff',             sub: 'rgba(255,255,255,0.75)' }
-  if (pct < 0.45) return { bg: '#1D9E75', text: '#fff',             sub: 'rgba(255,255,255,0.8)' }
-  if (pct < 0.60) return { bg: '#5DCAA5', text: '#085041',          sub: '#0F6E56' }
-  if (pct < 0.75) return { bg: '#9FE1CB', text: '#085041',          sub: '#0F6E56' }
-  if (pct < 0.88) return { bg: '#c8ede0', text: '#085041',          sub: '#0F6E56' }
-  return              { bg: '#e8f4f0', text: '#0F6E56',          sub: '#1D9E75' }
+  if (pct < 0.15) return { bg: '#085041', text: '#fff' }
+  if (pct < 0.30) return { bg: '#0F6E56', text: '#fff' }
+  if (pct < 0.45) return { bg: '#1D9E75', text: '#fff' }
+  if (pct < 0.60) return { bg: '#5DCAA5', text: '#085041' }
+  if (pct < 0.75) return { bg: '#9FE1CB', text: '#085041' }
+  if (pct < 0.88) return { bg: '#c8ede0', text: '#085041' }
+  return { bg: '#e8f4f0', text: '#0F6E56' }
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -216,7 +199,6 @@ export default function MarketPage() {
     fetchAll()
   }, [])
 
-  // Sorted + sliced cities
   const sortedCities = [...cities].sort((a, b) => {
     if (citySort === 'price') return b.median_price - a.median_price
     if (citySort === 'count') return b.count - a.count
@@ -224,12 +206,8 @@ export default function MarketPage() {
     return 0
   })
   const displayedCities = showAll ? sortedCities : sortedCities.slice(0, 10)
-
-  // Top/bottom 5
   const top5    = [...cities].sort((a, b) => b.median_price - a.median_price).slice(0, 5)
   const bottom5 = [...cities].sort((a, b) => a.median_price - b.median_price).slice(0, 5)
-
-  // Max price for type bars
   const maxTypePrice = Math.max(...types.map(t => t.median_price), 1)
 
   if (loading) return (
@@ -273,7 +251,7 @@ export default function MarketPage() {
           <span style={{ color: '#1D9E75' }}>at a glance.</span>
         </h1>
         <p style={styles.heroSub}>
-          Based on {summary ? summary.total_transactions.toLocaleString() : '—'}+ verified transactions · Registre foncier du Québec
+          Based on 200,000+ verified Greater Montréal transactions.
         </p>
       </div>
 
@@ -298,12 +276,12 @@ export default function MarketPage() {
           <StatCard
             label="Transactions"
             value={summary.total_transactions.toLocaleString() + '+'}
-            sub="Registre foncier"
+            sub="Greater Montréal area"
           />
           {summary.most_active_city && (
             <StatCard
               label="Most active city"
-              value={summary.most_active_city}
+              value={capitalizeCity(summary.most_active_city)}
               sub={summary.most_active_pct ? `${summary.most_active_pct}% of sales` : undefined}
               smallValue
             />
@@ -352,7 +330,7 @@ export default function MarketPage() {
               return (
                 <div key={c.city} style={{ ...styles.heatCell, background: col.bg }}>
                   <div style={{ fontSize: 11, fontWeight: 500, color: col.text, marginBottom: 2, lineHeight: 1.3 }}>
-                    {c.city}
+                    {capitalizeCity(c.city)}
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 500, color: col.text }}>
                     {fmt(c.median_price)}
@@ -373,12 +351,7 @@ export default function MarketPage() {
                   {t.type}
                 </div>
                 <div style={{ flex: 1, height: 10, background: 'rgba(29,158,117,0.12)', borderRadius: 99 }}>
-                  <div style={{
-                    width: `${(t.median_price / maxTypePrice) * 100}%`,
-                    height: '100%',
-                    background: '#1D9E75',
-                    borderRadius: 99,
-                  }} />
+                  <div style={{ width: `${(t.median_price / maxTypePrice) * 100}%`, height: '100%', background: '#1D9E75', borderRadius: 99 }} />
                 </div>
                 <div style={{ width: 76, fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', textAlign: 'right' }}>
                   {fmt(t.median_price)}
@@ -416,10 +389,7 @@ export default function MarketPage() {
                 <button
                   key={s}
                   onClick={() => setCitySort(s)}
-                  style={{
-                    ...styles.sortBtn,
-                    ...(citySort === s ? styles.sortBtnActive : {}),
-                  }}
+                  style={{ ...styles.sortBtn, ...(citySort === s ? styles.sortBtnActive : {}) }}
                 >
                   {s === 'price' ? 'By price' : s === 'count' ? 'By volume' : 'By YoY'}
                 </button>
@@ -442,7 +412,7 @@ export default function MarketPage() {
                 {displayedCities.map((c, i) => (
                   <tr key={c.city} style={i % 2 === 0 ? styles.trEven : {}}>
                     <td style={styles.td}><span style={styles.rankNum}>{i + 1}</span></td>
-                    <td style={{ ...styles.td, fontWeight: 500 }}>{c.city}</td>
+                    <td style={{ ...styles.td, fontWeight: 500 }}>{capitalizeCity(c.city)}</td>
                     <td style={{ ...styles.td, textAlign: 'right' }}>{fmtFull(c.median_price)}</td>
                     <td style={{ ...styles.td, textAlign: 'right', color: 'var(--text-muted)' }}>{c.count.toLocaleString()}</td>
                     <td style={{ ...styles.td, textAlign: 'right' }}><YoY val={c.yoy_change} /></td>
@@ -466,22 +436,15 @@ export default function MarketPage() {
       {/* ── FOOTER ── */}
       <footer style={styles.footer}>
         <p>© {new Date().getFullYear()} LynqEstate · Greater Montréal & Laval · Quebec, Canada</p>
-        <p style={{ marginTop: 4 }}>Data sourced from the Registre foncier du Québec. For informational purposes only.</p>
+        <p style={{ marginTop: 4 }}>For informational purposes only and does not constitute a formal appraisal.</p>
       </footer>
     </div>
   )
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-function StatCard({
-  label, value, sub, subUp, trendColor, smallValue
-}: {
-  label: string
-  value: string
-  sub?: string
-  subUp?: boolean
-  trendColor?: string
-  smallValue?: boolean
+function StatCard({ label, value, sub, subUp, trendColor, smallValue }: {
+  label: string; value: string; sub?: string; subUp?: boolean; trendColor?: string; smallValue?: boolean
 }) {
   return (
     <div style={styles.statCard}>
@@ -490,10 +453,7 @@ function StatCard({
         {value}
       </p>
       {sub && (
-        <p style={{
-          ...styles.statSub,
-          color: subUp === true ? '#1D9E75' : subUp === false ? '#e05c5c' : 'var(--text-muted)'
-        }}>
+        <p style={{ ...styles.statSub, color: subUp === true ? '#1D9E75' : subUp === false ? '#e05c5c' : 'var(--text-muted)' }}>
           {sub}
         </p>
       )}
@@ -514,7 +474,7 @@ function RankList({ rows, reverse }: { rows: CityRow[]; reverse?: boolean }) {
             <span style={{ fontSize: 11, color: '#1D9E75', fontWeight: 500, width: 16 }}>
               {reverse ? rows.length - i : i + 1}
             </span>
-            <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{c.city}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{capitalizeCity(c.city)}</span>
           </div>
           <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>
             {fmtFull(c.median_price)}
@@ -527,10 +487,9 @@ function RankList({ rows, reverse }: { rows: CityRow[]; reverse?: boolean }) {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
-  page:       { background: '#f5f0e8', minHeight: '100vh', fontFamily: 'var(--font-sans, DM Sans, sans-serif)' },
-  loadWrap:   { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' },
-  spinner:    { width: 28, height: 28, border: '2px solid rgba(29,158,117,0.2)', borderTopColor: '#1D9E75', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
-
+  page:        { background: '#f5f0e8', minHeight: '100vh', fontFamily: 'var(--font-sans, DM Sans, sans-serif)' },
+  loadWrap:    { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' },
+  spinner:     { width: 28, height: 28, border: '2px solid rgba(29,158,117,0.2)', borderTopColor: '#1D9E75', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   nav:         { background: '#f5f0e8', padding: '16px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid rgba(29,158,117,0.2)' },
   logo:        { display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 500, color: '#1a2420', textDecoration: 'none' },
   logoIcon:    { width: 24, height: 24, background: '#1D9E75', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' },
@@ -538,41 +497,32 @@ const styles: Record<string, React.CSSProperties> = {
   navLink:     { fontSize: 13, color: 'rgba(26,36,32,0.6)', textDecoration: 'none' },
   navLinkActive: { color: '#1D9E75', fontWeight: 500 },
   navCta:      { background: '#1D9E75', color: '#fff', fontSize: 13, padding: '8px 18px', borderRadius: 8, textDecoration: 'none' },
-
   hero:        { padding: '40px 40px 0' },
   heroLabel:   { fontSize: 11, letterSpacing: '0.08em', color: '#1D9E75', fontWeight: 500, textTransform: 'uppercase', marginBottom: 6 },
   heroTitle:   { fontFamily: "'Playfair Display', Georgia, serif", fontSize: 32, color: '#1a2420', fontWeight: 400, marginBottom: 8, lineHeight: 1.2 },
   heroSub:     { fontSize: 13, color: 'rgba(26,36,32,0.55)' },
-
   statsGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, padding: '24px 40px' },
   statCard:    { background: '#faf7f2', border: '0.5px solid rgba(29,158,117,0.18)', borderRadius: 12, padding: '16px 18px' },
   statLabel:   { fontSize: 10, letterSpacing: '0.07em', color: 'rgba(26,36,32,0.5)', textTransform: 'uppercase', marginBottom: 6 },
   statValue:   { fontSize: 20, fontWeight: 500, color: '#1a2420' },
   statSub:     { fontSize: 11, marginTop: 4 },
-
   content:     { padding: '0 40px 40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
   card:        { background: '#faf7f2', border: '0.5px solid rgba(29,158,117,0.18)', borderRadius: 14, padding: 20 },
   cardFull:    { gridColumn: '1 / -1' },
   cardTitle:   { fontSize: 11, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#1D9E75', fontWeight: 500, marginBottom: 16 },
   empty:       { fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' },
-
   heatGrid:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8 },
   heatCell:    { borderRadius: 8, padding: '10px 12px' },
-
   legend:      { display: 'flex', alignItems: 'center', gap: 8 },
   legendLabel: { fontSize: 10, color: 'rgba(26,36,32,0.5)' },
   legendBar:   { width: 80, height: 6, borderRadius: 99, background: 'linear-gradient(to right, #e8f4f0, #1D9E75, #085041)' },
-
   table:       { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
   th:          { fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(26,36,32,0.45)', padding: '0 8px 10px', textAlign: 'left', fontWeight: 500, borderBottom: '0.5px solid rgba(26,36,32,0.1)' },
   td:          { padding: '10px 8px', fontSize: 13, color: 'var(--text-primary)', borderBottom: '0.5px solid rgba(26,36,32,0.06)' },
   trEven:      { background: 'rgba(29,158,117,0.04)' },
   rankNum:     { fontSize: 11, color: '#1D9E75', fontWeight: 500 },
-
   sortBtn:     { fontSize: 11, padding: '5px 12px', borderRadius: 6, border: '0.5px solid rgba(29,158,117,0.3)', background: 'transparent', color: 'rgba(26,36,32,0.6)', cursor: 'pointer' },
   sortBtnActive: { background: '#1D9E75', color: '#fff', border: '0.5px solid #1D9E75' },
-
   showMore:    { display: 'block', width: '100%', marginTop: 16, padding: '10px', fontSize: 13, color: '#1D9E75', background: 'transparent', border: '0.5px solid rgba(29,158,117,0.3)', borderRadius: 8, cursor: 'pointer', textAlign: 'center' },
-
   footer:      { padding: '24px 40px', textAlign: 'center', fontSize: 11, color: 'rgba(26,36,32,0.4)', borderTop: '0.5px solid rgba(26,36,32,0.08)' },
 }
