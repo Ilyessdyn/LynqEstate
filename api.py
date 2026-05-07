@@ -274,22 +274,16 @@ MARKET_DF: pd.DataFrame | None = None
 
 def load_market_data():
     global MARKET_DF
-    # Try both possible CSV names from your project
-    for fname in ["laval_ml_ready.csv", "montreal_properties.csv"]:
+    for fname in ["/data/montreal_ml_ready.csv", "montreal_ml_ready.csv", "laval_ml_ready.csv"]:
         if os.path.exists(fname):
             df = pd.read_csv(fname)
-            # Normalise column names to lowercase
             df.columns = [c.lower() for c in df.columns]
-            # Keep only rows with a valid sale amount
             if "sale_amount" in df.columns:
                 df = df[df["sale_amount"].notna() & (df["sale_amount"] > 0)]
-    
-                # Reverse one-hot encoded city columns back to a single city column
                 if "city" not in df.columns:
                     city_cols = [c for c in df.columns if c.startswith("city_")]
-                if city_cols:
-                    df["city"] = df[city_cols].idxmax(axis=1).str.replace("city_", "", regex=False)
-    
+                    if city_cols:
+                        df["city"] = df[city_cols].idxmax(axis=1).str.replace("city_", "", regex=False)
                 MARKET_DF = df
                 print(f"✓ Market data loaded from {fname} — {len(df):,} rows")
                 return
