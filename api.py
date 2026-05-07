@@ -255,3 +255,302 @@ def predict(prop: PropertyInput):
         model_used=prop.property_type,
         plex_note=plex_note,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MARKET INTELLIGENCE ENDPOINTS
+# Add these imports at the top of api.py (if not already present):
+#   import os
+#   from functools import lru_cache
+#
+# Add this block AFTER the existing routes in api.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+import os
+from functools import lru_cache
+
+# ── Load market dataset at startup ───────────────────────────────────────────
+MARKET_DF: pd.DataFrame | None = None
+
+def load_market_data():
+    global MARKET_DF
+    # Try both possible CSV names from your project
+    for fname in ["laval_ml_ready.csv", "montreal_properties.csv"]:
+        if os.path.exists(fname):
+            df = pd.read_csv(fname)
+            # Normalise column names to lowercase
+            df.columns = [c.lower() for c in df.columns]
+            # Keep only rows with a valid sale amount
+            if "sale_amount" in df.columns:
+                df = df[df["sale_amount"].notna() & (df["sale_amount"] > 0)]
+    
+                # Reverse one-hot encoded city columns back to a single city column
+                if "city" not in df.columns:
+                    city_cols = [c for c in df.columns if c.startswith("city_")]
+                if city_cols:
+                    df["city"] = df[city_cols].idxmax(axis=1).str.replace("city_", "", regex=False)
+    
+                MARKET_DF = df
+                print(f"✓ Market data loaded from {fname} — {len(df):,} rows")
+                return
+    print("⚠️  No market CSV found — /market endpoints will return 503")
+
+load_market_data()
+
+
+def _require_market():
+    if MARKET_DF is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail="Market data not available.")
+    return MARKET_DF
+
+
+# ── Helper: compute market trend from last two 3-month windows ───────────────
+def _compute_trend(df: pd.DataFrame):
+    """
+    Compare median sale_amount in the last 3 months of the dataset
+    vs the 3 months before that.
+    Returns (trend_label, change_pct, consecutive_quarters_up).
+    """
+    if "sale_year" not in df.columns or "sale_month" not in df.columns:
+        return "Stable", 0.0, 0
+
+    df = df.copy()
+    df["period"] = df["sale_year"] * 100 + df["sale_month"]  # e.g. 202406
+    max_period = df["period"].max()
+
+    # Decode max period
+    max_year  = max_period // 100
+    max_month = max_period % 100
+
+    def months_back(n):
+        """Return period value n months before max."""
+        m = max_month - n
+        y = max_year
+        while m <= 0:
+            m += 12
+            y -= 1
+        return y * 100 + m
+
+    cutoff_recent   = months_back(3)   # 3 months ago
+    cutoff_previous = months_back(6)   # 6 months ago
+
+    recent   = df[df["period"] >  cutoff_recent]["sale_amount"].median()
+    previous = df[(df["period"] > cutoff_previous) & (df["period"] <= cutoff_recent)]["sale_amount"].median()
+
+    if pd.isna(recent) or pd.isna(previous) or previous == 0:
+        return "Stable", 0.0, 0
+
+    change_pct = (recent - previous) / previous * 100
+
+    if change_pct > 2:
+        trend = "Rising"
+    elif change_pct < -2:
+        trend = "Falling"
+    else:
+        trend = "Stable"
+
+    # Count consecutive rising quarters (up to last 4)
+    quarters = []
+    for i in range(4):
+        start = months_back(3 * (i + 1))
+        end   = months_back(3 * i)
+        window = df[(df["period"] > start) & (df["period"] <= end)]["sale_amount"].median()
+        quarters.append(window)
+
+    consecutive = 0
+    for j in range(len(quarters) - 1):
+        if not pd.isna(quarters[j]) and not pd.isna(quarters[j + 1]) and quarters[j] > quarters[j + 1]:
+            consecutive += 1
+        else:
+            break
+
+    return trend, round(change_pct, 2), consecutive
+
+
+# ── GET /market/summary ───────────────────────────────────────────────────────
+@app.get("/market/summary")
+def market_summary():
+    """Hero stats: median price, price/sqft, transaction count, most active city, trend."""
+    df = _require_market()
+
+    median_price = int(df["sale_amount"].median())
+
+    # Price per sq ft
+    price_per_sqft = None
+    if "floor_area" in df.columns:
+        valid = df[(df["floor_area"] > 100) & (df["floor_area"] < 20000)].copy()
+        valid["ppsf"] = valid["sale_amount"] / (valid["floor_area"] * 10.764)
+        price_per_sqft = round(valid["ppsf"].median(), 0)
+
+    # Most active city
+    most_active_city = None
+    most_active_pct  = None
+    if "city" in df.columns:
+        city_counts      = df["city"].value_counts()
+        most_active_city = city_counts.idxmax()
+        most_active_pct  = round(city_counts.max() / len(df) * 100, 1)
+
+    # YoY change
+    yoy_change = None
+    if "sale_year" in df.columns:
+        max_year  = int(df["sale_year"].max())
+        prev_year = max_year - 1
+        cur_med   = df[df["sale_year"] == max_year]["sale_amount"].median()
+        prev_med  = df[df["sale_year"] == prev_year]["sale_amount"].median()
+        if not pd.isna(cur_med) and not pd.isna(prev_med) and prev_med > 0:
+            yoy_change = round((cur_med - prev_med) / prev_med * 100, 2)
+
+    trend, trend_change_pct, consecutive_quarters = _compute_trend(df)
+
+    return {
+        "median_price":        median_price,
+        "price_per_sqft":      price_per_sqft,
+        "total_transactions":  len(df),
+        "most_active_city":    most_active_city,
+        "most_active_pct":     most_active_pct,
+        "yoy_change_pct":      yoy_change,
+        "market_trend":        trend,
+        "trend_change_pct":    trend_change_pct,
+        "consecutive_quarters": consecutive_quarters,
+    }
+
+
+# ── GET /market/trends ────────────────────────────────────────────────────────
+@app.get("/market/trends")
+def market_trends():
+    """Monthly median sale price over time — for the line chart."""
+    df = _require_market()
+
+    if "sale_year" not in df.columns or "sale_month" not in df.columns:
+        raise HTTPException(status_code=422, detail="sale_year / sale_month columns missing.")
+
+    grouped = (
+        df.groupby(["sale_year", "sale_month"])["sale_amount"]
+        .agg(median="median", count="count")
+        .reset_index()
+    )
+    grouped = grouped[grouped["count"] >= 5]  # skip sparse months
+    grouped = grouped.sort_values(["sale_year", "sale_month"])
+
+    return {
+        "data": [
+            {
+                "year":   int(r["sale_year"]),
+                "month":  int(r["sale_month"]),
+                "label":  f"{int(r['sale_year'])}-{int(r['sale_month']):02d}",
+                "median": int(r["median"]),
+                "count":  int(r["count"]),
+            }
+            for _, r in grouped.iterrows()
+        ]
+    }
+
+
+# ── GET /market/by-city ───────────────────────────────────────────────────────
+@app.get("/market/by-city")
+def market_by_city():
+    """Median price, transaction count, and price/sqft per city — for heatmap + table."""
+    df = _require_market()
+
+    if "city" not in df.columns:
+        raise HTTPException(status_code=422, detail="city column missing.")
+
+    agg = (
+        df.groupby("city")["sale_amount"]
+        .agg(median_price="median", count="count")
+        .reset_index()
+    )
+
+    # YoY per city
+    yoy_map = {}
+    if "sale_year" in df.columns:
+        max_year  = int(df["sale_year"].max())
+        prev_year = max_year - 1
+        for city, grp in df.groupby("city"):
+            cur  = grp[grp["sale_year"] == max_year]["sale_amount"].median()
+            prev = grp[grp["sale_year"] == prev_year]["sale_amount"].median()
+            if not pd.isna(cur) and not pd.isna(prev) and prev > 0:
+                yoy_map[city] = round((cur - prev) / prev * 100, 2)
+
+    # Price per sqft per city
+    ppsf_map = {}
+    if "floor_area" in df.columns:
+        valid = df[(df["floor_area"] > 100) & (df["floor_area"] < 20000)].copy()
+        valid["ppsf"] = valid["sale_amount"] / (valid["floor_area"] * 10.764)
+        for city, grp in valid.groupby("city"):
+            ppsf_map[city] = round(grp["ppsf"].median(), 0)
+
+    agg = agg[agg["count"] >= 10].sort_values("median_price", ascending=False)
+
+    return {
+        "data": [
+            {
+                "city":         row["city"],
+                "median_price": int(row["median_price"]),
+                "count":        int(row["count"]),
+                "yoy_change":   yoy_map.get(row["city"]),
+                "price_per_sqft": ppsf_map.get(row["city"]),
+            }
+            for _, row in agg.iterrows()
+        ]
+    }
+
+
+# ── GET /market/by-type ───────────────────────────────────────────────────────
+@app.get("/market/by-type")
+def market_by_type():
+    """Median price per property type — for the bar chart."""
+    df = _require_market()
+
+    type_col = None
+    for col in ["property_type", "building_type"]:
+        if col in df.columns:
+            type_col = col
+            break
+
+    if type_col is None:
+        raise HTTPException(status_code=422, detail="No property_type or building_type column found.")
+
+    agg = (
+        df.groupby(type_col)["sale_amount"]
+        .agg(median_price="median", count="count")
+        .reset_index()
+    )
+    agg = agg[agg["count"] >= 10].sort_values("median_price", ascending=False)
+
+    return {
+        "type_column": type_col,
+        "data": [
+            {
+                "type":         row[type_col],
+                "median_price": int(row["median_price"]),
+                "count":        int(row["count"]),
+            }
+            for _, row in agg.iterrows()
+        ]
+    }
+
+
+# ── GET /market/volume ────────────────────────────────────────────────────────
+@app.get("/market/volume")
+def market_volume():
+    """Transaction count by month (1–12) — for the seasonality bar chart."""
+    df = _require_market()
+
+    if "sale_month" not in df.columns:
+        raise HTTPException(status_code=422, detail="sale_month column missing.")
+
+    counts = df.groupby("sale_month").size().reset_index(name="count")
+    month_names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+    result = []
+    for m in range(1, 13):
+        row = counts[counts["sale_month"] == m]
+        result.append({
+            "month":  m,
+            "label":  month_names[m - 1],
+            "count":  int(row["count"].values[0]) if len(row) else 0,
+        })
+
+    return {"data": result}
