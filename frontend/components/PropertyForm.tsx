@@ -40,6 +40,12 @@ interface PredictionResult {
   model_version: string
   renovation_bonus?: number
   plex_note?: string
+  latitude?: number
+  longitude?: number
+  city?: string
+  property_type?: string
+  floor_area?: number
+  year_built?: number
 }
  
 const RENOVATION_MULTIPLIERS: Record<string, number> = {
@@ -187,6 +193,12 @@ export default function PropertyForm() {
         model_version: data.model_version,
         renovation_bonus: renovationBonus > 0 ? renovationBonus : undefined,
         plex_note: data.plex_note || undefined,
+        latitude: Number(form.lat),
+        longitude: Number(form.lon),
+        city: form.city,
+        property_type: form.property_type,
+        floor_area: Number(form.floor_area),
+        year_built: Number(form.year_built),
       })
     } catch (e: any) {
       setError(e.message || 'Could not reach the estimation API. Make sure it is running.')
