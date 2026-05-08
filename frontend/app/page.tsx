@@ -1,7 +1,11 @@
+'use client'
 import Link from 'next/link'
+import { UserButton, SignUpButton, SignInButton, useUser } from '@clerk/nextjs'
 import PropertyForm from '../components/PropertyForm'
-
+ 
 export default function Home() {
+  const { isSignedIn } = useUser()
+ 
   return (
     <main style={{
       minHeight: '100vh',
@@ -9,7 +13,7 @@ export default function Home() {
       position: 'relative',
       zIndex: 1,
     }}>
-
+ 
       {/* ── NAV ── */}
       <nav style={{
         background: '#f5f0e8',
@@ -28,15 +32,37 @@ export default function Home() {
           </div>
           LynqEstate
         </div>
+ 
         <div style={{ display: 'flex', gap: 24 }}>
           <Link href="/" style={{ fontSize: 13, color: '#1D9E75', fontWeight: 500, textDecoration: 'none' }}>Estimate</Link>
           <Link href="/market" style={{ fontSize: 13, color: 'rgba(26,36,32,0.6)', textDecoration: 'none' }}>Market</Link>
         </div>
-        <Link href="/market" style={{ background: '#1D9E75', color: '#fff', fontSize: 13, padding: '8px 18px', borderRadius: 8, textDecoration: 'none' }}>
-          Market data →
-        </Link>
+ 
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {!isSignedIn ? (
+            <>
+              <SignInButton mode="modal">
+                <button style={{ fontSize: 13, color: 'rgba(26,36,32,0.6)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  Sign in
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button style={{ background: '#1D9E75', color: '#fff', fontSize: 13, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>
+                  Sign up free
+                </button>
+              </SignUpButton>
+            </>
+          ) : (
+            <>
+              <Link href="/market" style={{ background: '#1D9E75', color: '#fff', fontSize: 13, padding: '8px 18px', borderRadius: 8, textDecoration: 'none' }}>
+                Market data →
+              </Link>
+              <UserButton />
+            </>
+          )}
+        </div>
       </nav>
-
+ 
       {/* Header */}
       <header style={{ textAlign: 'center', marginBottom: 56, padding: '0 24px' }}>
         <h1 style={{
@@ -51,7 +77,7 @@ export default function Home() {
           What is your home<br />
           <span style={{ color: 'var(--green)' }}>worth today?</span>
         </h1>
-
+ 
         <p style={{
           fontSize: 16,
           color: 'var(--text-secondary)',
@@ -62,14 +88,14 @@ export default function Home() {
           Instant price estimate powered by 200,000+ real Greater Montreal transactions.
         </p>
       </header>
-
+ 
       {/* Form card */}
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '0 24px' }}>
         <div className="card" style={{ padding: '36px 32px' }}>
           <PropertyForm />
         </div>
       </div>
-
+ 
       {/* Footer */}
       <footer style={{ textAlign: 'center', marginTop: 48 }}>
         <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
