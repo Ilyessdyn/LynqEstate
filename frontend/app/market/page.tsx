@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+} from 'recharts'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Summary {
@@ -46,7 +56,6 @@ interface VolumeRow {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? ''
 
-// ── Capitalize city names ─────────────────────────────────────────────────────
 function capitalizeCity(city: string): string {
   return city
     .split(' ')
@@ -78,50 +87,30 @@ function YoY({ val }: { val: number | null }) {
   )
 }
 
-// ── Sparkline (SVG) ───────────────────────────────────────────────────────────
-function Sparkline({ data }: { data: TrendPoint[] }) {
-  if (!data.length) return null
-
-  const W = 640, H = 140, PL = 52, PR = 16, PT = 12, PB = 28
-  const chartW = W - PL - PR
-  const chartH = H - PT - PB
-
-  const prices = data.map(d => d.median)
-  const minP = Math.min(...prices)
-  const maxP = Math.max(...prices)
-  const range = maxP - minP || 1
-
-  const px = (i: number) => PL + (i / (data.length - 1)) * chartW
-  const py = (p: number) => PT + chartH - ((p - minP) / range) * chartH
-
-  const points = data.map((d, i) => `${px(i)},${py(d.median)}`).join(' ')
-  const areaPoints = `${PL},${PT + chartH} ` + points + ` ${px(data.length - 1)},${PT + chartH}`
-
-  const ticks = data.filter((_, i) => i % 6 === 0 || i === data.length - 1)
-  const yLabels = [minP, (minP + maxP) / 2, maxP]
-
+// ── Custom Tooltip ────────────────────────────────────────────────────────────
+function CustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload || !payload.length) return null
+  const d = payload[0].payload
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const monthName = monthNames[(d.month - 1)] ?? ''
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
-      <defs>
-        <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1D9E75" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#1D9E75" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {yLabels.map((p, i) => (
-        <g key={i}>
-          <line x1={PL} y1={py(p)} x2={W - PR} y2={py(p)} stroke="rgba(26,36,32,0.08)" strokeWidth="0.5" strokeDasharray="4 4" />
-          <text x={PL - 6} y={py(p) + 4} fontSize="9" fill="rgba(26,36,32,0.45)" textAnchor="end">{fmt(p)}</text>
-        </g>
-      ))}
-      <polygon points={areaPoints} fill="url(#areaFill)" />
-      <polyline points={points} fill="none" stroke="#1D9E75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={px(data.length - 1)} cy={py(data[data.length - 1].median)} r="4" fill="#1D9E75" />
-      {ticks.map((d, i) => (
-        <text key={i} x={px(data.indexOf(d))} y={H - 4} fontSize="9" fill="rgba(26,36,32,0.4)" textAnchor="middle">{d.label}</text>
-      ))}
-      <line x1={PL} y1={PT + chartH} x2={W - PR} y2={PT + chartH} stroke="rgba(26,36,32,0.1)" strokeWidth="0.5" />
-    </svg>
+    <div style={{
+      background: '#faf7f2',
+      border: '0.5px solid rgba(29,158,117,0.25)',
+      borderRadius: 10,
+      padding: '10px 14px',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+    }}>
+      <p style={{ fontSize: 11, color: '#1D9E75', fontWeight: 500, marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+        {monthName} {d.year}
+      </p>
+      <p style={{ fontSize: 18, fontWeight: 500, color: '#1a2420', marginBottom: 2 }}>
+        {fmtFull(d.median)}
+      </p>
+      <p style={{ fontSize: 11, color: 'rgba(26,36,32,0.5)' }}>
+        {d.count.toLocaleString()} transactions
+      </p>
+    </div>
   )
 }
 
@@ -210,10 +199,15 @@ export default function MarketPage() {
   const bottom5 = [...cities].sort((a, b) => a.median_price - b.median_price).slice(0, 5)
   const maxTypePrice = Math.max(...types.map(t => t.median_price), 1)
 
+  // Yearly tick labels for x-axis — one per year
+  const yearlyTicks = trends
+    .filter(d => d.month === 1)
+    .map(d => d.label)
+
   if (loading) return (
     <div style={styles.loadWrap}>
       <div style={styles.spinner} />
-      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 16 }}>Loading market data…</p>
+      <p style={{ fontSize: 13, color: 'rgba(26,36,32,0.5)', marginTop: 16 }}>Loading market data…</p>
     </div>
   )
 
@@ -305,13 +299,57 @@ export default function MarketPage() {
 
       <div style={styles.content}>
 
-        {/* ── PRICE TREND ── */}
+        {/* ── PRICE TREND — RECHARTS ── */}
         <div style={{ ...styles.card, ...styles.cardFull }}>
           <p style={styles.cardTitle}>Median sale price — monthly trend</p>
-          {trends.length > 0
-            ? <Sparkline data={trends} />
-            : <p style={styles.empty}>Not enough data to display trend.</p>
-          }
+          {trends.length > 0 ? (
+            <div style={{ width: '100%', height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trends} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="lineGlow" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#1D9E75" stopOpacity={0.15} />
+                      <stop offset="100%" stopColor="#1D9E75" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="4 4"
+                    stroke="rgba(26,36,32,0.07)"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="label"
+                    ticks={yearlyTicks}
+                    tick={{ fontSize: 10, fill: 'rgba(26,36,32,0.4)', fontFamily: 'DM Sans, sans-serif' }}
+                    axisLine={{ stroke: 'rgba(26,36,32,0.1)' }}
+                    tickLine={false}
+                    tickFormatter={(val) => val.split('-')[0]}
+                  />
+                  <YAxis
+                    tickFormatter={(v) => fmt(v)}
+                    tick={{ fontSize: 10, fill: 'rgba(26,36,32,0.4)', fontFamily: 'DM Sans, sans-serif' }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={52}
+                  />
+                  <Tooltip
+                    content={<CustomTooltip />}
+                    cursor={{ stroke: 'rgba(29,158,117,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="median"
+                    stroke="#1D9E75"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 5, fill: '#1D9E75', stroke: '#faf7f2', strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p style={styles.empty}>Not enough data to display trend.</p>
+          )}
         </div>
 
         {/* ── HEATMAP ── */}
