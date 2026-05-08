@@ -233,17 +233,60 @@ def predict(prop: PropertyInput):
     range_low  = int(round(estimate * (1 - margin) / 1000) * 1000)
     range_high = int(round(estimate * (1 + margin) / 1000) * 1000)
  
-    # Confidence label
+    
+    # ── Confidence score — three factor model ─────────────────────────────────
     assessment_ratio = prop.total_assessed_value / estimate if estimate > 0 else 1
-    if 0.7 <= assessment_ratio <= 1.3:
+
+    # Factor 1 — city sample size
+    city_counts = {
+    "Montréal": 80000, "Laval": 30000, "Longueuil": 8000,
+    "Terrebonne": 5000, "Repentigny": 4000, "Blainville": 3000,
+    "Mirabel": 3000, "Saint-Jérôme": 3000, "Brossard": 3000,
+    "Vaudreuil-Dorion": 2500, "Saint-Eustache": 2500, "Mascouche": 2000,
+    "Boisbriand": 1500, "Rosemère": 1500, "Sainte-Thérèse": 1500,
+    "Saint-Bruno-De-Montarville": 1500, "Beaconsfield": 1200,
+    "Dollard-Des-Ormeaux": 1200, "Kirkland": 1000, "Pointe-Claire": 1000,
+    "Boucherville": 1000, "Saint-Lambert": 800, "Westmount": 800,
+    "Mont-Royal": 700, "Côte-Saint-Luc": 700, "Candiac": 600,
+    "La Prairie": 600, "Sainte-Catherine": 500,
+    }
+    city_sample = city_counts.get(prop.city, 300)
+    if city_sample >= 500:
+        city_score = 2      # good
+    elif city_sample >= 200:
+        city_score = 1      # medium
+    else:
+        city_score = 0      # low
+
+    # Factor 2 — assessment ratio
+    if 0.75 <= assessment_ratio <= 1.25:
+        ratio_score = 2     # good
+    elif 0.60 <= assessment_ratio <= 1.40:
+        ratio_score = 1     # acceptable
+    else:
+        ratio_score = 0     # bad
+
+    # Factor 3 — property type MAPE
+    mape_score = {
+    "condo":       2,   # 8.72% MAPE — tightest
+    "unifamilial": 1,   # 10% MAPE — medium
+    "plex":        0,   # 17% MAPE — widest
+    }.get(prop.property_type, 1)
+
+    # Combine — plex always capped at medium
+    total_score = city_score + ratio_score + mape_score
+
+    if prop.property_type == "plex":
+        confidence = "medium" if total_score >= 2 else "low"
+    elif total_score >= 5:
         confidence = "high"
-    elif 0.5 <= assessment_ratio <= 1.5:
+    elif total_score >= 3:
         confidence = "medium"
     else:
-        confidence = "low"
+    
  
     # Plex disclaimer
-    plex_note = ""
+        plex_note = ""
     if prop.property_type == "plex":
         plex_note = "Plex valuations are estimates only. Rental income, lease terms, and vacancy rates significantly affect market value and are not captured in this model."
  
