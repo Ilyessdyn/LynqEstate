@@ -278,15 +278,36 @@ def load_market_data():
         if os.path.exists(fname):
             df = pd.read_csv(fname)
             df.columns = [c.lower() for c in df.columns]
-            if "sale_amount" in df.columns:
-                df = df[df["sale_amount"].notna() & (df["sale_amount"] > 0)]
-                if "city" not in df.columns:
-                    city_cols = [c for c in df.columns if c.startswith("city_")]
-                    if city_cols:
-                        df["city"] = df[city_cols].idxmax(axis=1).str.replace("city_", "", regex=False)
-                MARKET_DF = df
-                print(f"✓ Market data loaded from {fname} — {len(df):,} rows")
-                return
+            if "sale_amount" not in df.columns:
+                continue
+            df = df[df["sale_amount"].notna() & (df["sale_amount"] > 0)]
+
+            # Reverse one-hot city
+            if "city" not in df.columns:
+                city_cols = [c for c in df.columns if c.startswith("city_")]
+                if city_cols:
+                    df["city"] = df[city_cols].idxmax(axis=1).str.replace("city_", "", regex=False)
+                    df = df.drop(columns=city_cols)
+
+            # Reverse one-hot property_type
+            if "property_type" not in df.columns:
+                pt_cols = [c for c in df.columns if c.startswith("property_type_")]
+                if pt_cols:
+                    df["property_type"] = df[pt_cols].idxmax(axis=1).str.replace("property_type_", "", regex=False)
+                    df = df.drop(columns=pt_cols)
+
+            # Drop other one-hot columns to save memory
+            drop_prefixes = ("physical_link_", "building_type_")
+            drop_cols = [c for c in df.columns if c.startswith(drop_prefixes)]
+            df = df.drop(columns=drop_cols)
+
+            # Keep only columns we need
+            keep = ["sale_amount", "sale_year", "sale_month", "floor_area", "city", "property_type"]
+            df = df[[c for c in keep if c in df.columns]].copy()
+
+            MARKET_DF = df
+            print(f"✓ Market data loaded from {fname} — {len(df):,} rows, {df.memory_usage(deep=True).sum() / 1e6:.1f} MB")
+            return
     print("⚠️  No market CSV found — /market endpoints will return 503")
 
 load_market_data()
