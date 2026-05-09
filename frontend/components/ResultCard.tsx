@@ -370,7 +370,7 @@ export default function ResultCard({ result, onReset }: Props) {
           doc.roundedRect(M, y, CW, 12, 2, 2, 'F')
           doc.setTextColor(yoyUp ? 29 : 180, yoyUp ? 120 : 50, yoyUp ? 80 : 50)
           doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setCharSpace(0)
-          const yoyText = `${yoyUp ? '↑' : '↓'} ${Math.abs(marketSummary.yoy_change_pct).toFixed(1)}% year-over-year in Greater Montréal`
+          const yoyText = `${yoyUp ? '+' : '-'} ${Math.abs(marketSummary.yoy_change_pct).toFixed(1)}% year-over-year in Greater Montréal`
           const yoyW = doc.getTextWidth(yoyText)
           doc.text(yoyText, CX - yoyW / 2, y + 7.5)
           y += 20
