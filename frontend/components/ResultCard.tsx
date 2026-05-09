@@ -122,10 +122,10 @@ export default function ResultCard({ result, onReset }: Props) {
  
       // Column positions for comparable table (mm from left)
       const COL_ADDR  = M + IP
-      const COL_SOLD  = 118
-      const COL_PRICE = 143
-      const COL_SIZE  = 167
-      const COL_DIST  = 189
+      const COL_SOLD  = 86
+      const COL_PRICE = 108
+      const COL_SIZE  = 132
+      const COL_DIST  = 152
  
       // ── Palette ───────────────────────────────────────────────────────────
       const GD     = [15,  70,  50]  as const   // dark green (header/footer)
@@ -266,14 +266,14 @@ export default function ResultCard({ result, onReset }: Props) {
       else if (result.confidence === 'medium') doc.setFillColor(224, 152, 0)
       else                                     doc.setFillColor(208, 75,  75)
  
-      const PW = 48, PH = 7
+      const PW = 52, PH = 7
       const PX  = CX - PW / 2
       const PY  = y + CH - PH - 4
       doc.roundedRect(PX, PY, PW, PH, PH / 2, PH / 2, 'F')  // fully rounded pill
       doc.setTextColor(...WHITE)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(5.8)
-      doc.setCharSpace(1.0)
+      doc.setCharSpace(0.5)
       doc.text(`${result.confidence.toUpperCase()} CONFIDENCE`, CX, PY + PH * 0.67, { align: 'center' })
       doc.setCharSpace(0)
  
