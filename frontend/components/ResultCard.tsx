@@ -107,29 +107,22 @@ export default function ResultCard({ result, onReset }: Props) {
     ? Math.round(result.estimate / (1 + result.renovation_bonus! / 100) / 1000) * 1000
     : null
  
-  // ── PDF Generation ──────────────────────────────────────────────────────
   async function handleDownloadPDF() {
     setPdfLoading(true)
     try {
       const { jsPDF } = await import('jspdf')
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
  
-      // ── Page constants ──────────────────────────────────────────────────
-      const W   = 210
-      const H   = 297
-      const M   = 14
-      const CW  = W - 2 * M   // 182mm
-      const CX  = W / 2       // 105mm
+      const W  = 210, H = 297, M = 14
+      const CW = W - 2 * M
+      const CX = W / 2
  
-      // ── Helper: true centering using measured width ──────────────────────
-      // Always sets charSpace(0) before measuring — no drift
       const drawCentered = (text: string, y: number) => {
         doc.setCharSpace(0)
         const tw = doc.getTextWidth(text)
         doc.text(text, CX - tw / 2, y)
       }
  
-      // ── Colours ─────────────────────────────────────────────────────────
       const GD     = [15,  70,  50] as const
       const G      = [29, 158, 117] as const
       const DARK   = [26,  36,  32] as const
@@ -140,46 +133,32 @@ export default function ResultCard({ result, onReset }: Props) {
       const STRIPE = [237,233, 224] as const
  
       const cap = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—'
-      const dateStr = new Date().toLocaleDateString('en-CA', {
-        year: 'numeric', month: 'long', day: 'numeric'
-      })
+      const dateStr = new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })
       const ROW = 8.5
  
-      // ── Shared: draw header ──────────────────────────────────────────────
       const drawHeader = () => {
         const HDR = 26
         doc.setFillColor(...GD)
         doc.rect(0, 0, W, HDR, 'F')
-        const LY = HDR / 2
-        const LS = 6
-        const LX = M + LS
+        const LY = HDR / 2, LS = 6, LX = M + LS
         doc.setFillColor(...WHITE)
         doc.triangle(LX, LY - LS, LX - LS*0.85, LY + LS*0.62, LX + LS*0.85, LY + LS*0.62, 'F')
         doc.setTextColor(...WHITE)
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(13)
-        doc.setCharSpace(0)
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setCharSpace(0)
         doc.text('LynqEstate', LX + LS + 2, LY + 1.6)
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(7.5)
-        doc.setTextColor(185, 228, 210)
-        doc.setCharSpace(0)
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(185, 228, 210); doc.setCharSpace(0)
         doc.text('Real Estate Valuation Report', W - M, LY - 2.5, { align: 'right' })
-        doc.setFontSize(6.5)
-        doc.setTextColor(148, 198, 175)
+        doc.setFontSize(6.5); doc.setTextColor(148, 198, 175)
         doc.text('Greater Montréal & Laval · Quebec, Canada', W - M, LY + 4, { align: 'right' })
         return HDR
       }
  
-      // ── Shared: draw footer ──────────────────────────────────────────────
       const drawFooter = () => {
         const FH = 12
         doc.setFillColor(...GD)
         doc.rect(0, H - FH, W, FH, 'F')
         const FY = H - FH / 2 + 1.5
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(6.5)
-        doc.setCharSpace(0)
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setCharSpace(0)
         doc.setTextColor(185, 228, 210)
         doc.text('lynqestate.com', M, FY)
         doc.setTextColor(148, 198, 175)
@@ -189,134 +168,82 @@ export default function ResultCard({ result, onReset }: Props) {
         return FH
       }
  
-      // ════════════════════════════════════════════════════════════════════
-      // PAGE 1 — Estimate Summary
-      // ════════════════════════════════════════════════════════════════════
- 
-      // Background
-      doc.setFillColor(...WARM)
-      doc.rect(0, 0, W, H, 'F')
- 
-      // Watermark
       const bc = (g: number, bg: number, a: number) => Math.round(bg + (g - bg) * a)
       const wt = (cx2: number, cy: number, s: number, a: number) => {
         doc.setFillColor(bc(29,245,a), bc(158,240,a), bc(117,232,a))
         doc.triangle(cx2, cy - s*0.65, cx2 - s*0.55, cy + s*0.38, cx2 + s*0.55, cy + s*0.38, 'F')
       }
-      wt(CX, H*0.50, 100, 0.08)
-      wt(CX, H*0.50,  65, 0.09)
-      wt(CX, H*0.50,  32, 0.10)
+ 
+      // ══════════════════════════════════════════════════════════════
+      // PAGE 1 — Estimate Summary
+      // ══════════════════════════════════════════════════════════════
+      doc.setFillColor(...WARM); doc.rect(0, 0, W, H, 'F')
+      wt(CX, H*0.50, 100, 0.08); wt(CX, H*0.50, 65, 0.09); wt(CX, H*0.50, 32, 0.10)
  
       const HDR1 = drawHeader()
       const FH1  = 12
+      doc.setFillColor(...CARD); doc.rect(0, HDR1, W, H - HDR1 - FH1, 'F')
  
-      // Content background
-      doc.setFillColor(...CARD)
-      doc.rect(0, HDR1, W, H - HDR1 - FH1, 'F')
- 
-      // Title
       let y = HDR1 + 10
-      doc.setTextColor(...DARK)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(16)
-      doc.setCharSpace(0)
+      doc.setTextColor(...DARK); doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setCharSpace(0)
       doc.text('Property Valuation Report', M, y)
  
       y += 5.5
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-      doc.setTextColor(...MUTED)
-      doc.setCharSpace(0)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED); doc.setCharSpace(0)
       doc.text(`Generated on ${dateStr}`, M, y)
  
-      // Address line (if available)
       if (result.address) {
         y += 5
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(8.5)
-        doc.setTextColor(...DARK)
-        doc.setCharSpace(0)
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...DARK); doc.setCharSpace(0)
         doc.text(result.address, M, y)
       }
  
       y += 4
-      doc.setDrawColor(...G)
-      doc.setLineWidth(0.4)
-      doc.line(M, y, W - M, y)
+      doc.setDrawColor(...G); doc.setLineWidth(0.4); doc.line(M, y, W - M, y)
  
-      // ── Estimate card ───────────────────────────────────────────────────
       y += 5
-      const CH   = 56
-      const CSTH = 9
+      const CH = 56, CSTH = 9
  
-      doc.setFillColor(...WHITE)
-      doc.setDrawColor(...G)
-      doc.setLineWidth(0.4)
+      doc.setFillColor(...WHITE); doc.setDrawColor(...G); doc.setLineWidth(0.4)
       doc.roundedRect(M, y, CW, CH, 2, 2, 'FD')
- 
-      // Green stripe
       doc.setFillColor(...G)
       doc.roundedRect(M, y, CW, CSTH, 2, 2, 'F')
       doc.rect(M, y + CSTH - 3, CW, 3, 'F')
  
-      // Stripe label
-      doc.setTextColor(...WHITE)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(7)
+      doc.setTextColor(...WHITE); doc.setFont('helvetica', 'bold'); doc.setFontSize(7)
       drawCentered('ESTIMATED MARKET VALUE', y + CSTH * 0.7)
  
-      // Price
-      doc.setTextColor(...DARK)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(28)
+      doc.setTextColor(...DARK); doc.setFont('helvetica', 'bold'); doc.setFontSize(28)
       drawCentered(formatCAD(result.estimate), y + CSTH + 14)
  
-      // Thin divider
       const divY = y + CSTH + 18
-      doc.setDrawColor(220, 216, 208)
-      doc.setLineWidth(0.3)
+      doc.setDrawColor(220, 216, 208); doc.setLineWidth(0.3)
       doc.line(M + 20, divY, W - M - 20, divY)
  
-      // Range label
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(6.5)
-      doc.setTextColor(...MUTED)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED)
       drawCentered('ESTIMATED RANGE', divY + 6)
  
-      // Range values
-      doc.setFontSize(9.5)
-      doc.setTextColor(100, 110, 106)
+      doc.setFontSize(9.5); doc.setTextColor(100, 110, 106)
       drawCentered(`${formatCAD(result.range_low)}  —  ${formatCAD(result.range_high)}`, divY + 13)
  
-      // Confidence pill — sized around text
       if (result.confidence === 'high')        doc.setFillColor(29,  158, 117)
       else if (result.confidence === 'medium') doc.setFillColor(224, 152,   0)
       else                                     doc.setFillColor(208,  75,  75)
  
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(6.5)
-      doc.setCharSpace(0)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setCharSpace(0)
       const pillText = `${result.confidence.toUpperCase()} CONFIDENCE`
       const pillTW   = doc.getTextWidth(pillText)
       const PH = 7, PW = pillTW + 10
-      const PX = CX - PW / 2
-      const PY = y + CH - PH - 4
+      const PX = CX - PW / 2, PY = y + CH - PH - 4
       doc.roundedRect(PX, PY, PW, PH, PH / 2, PH / 2, 'F')
       doc.setTextColor(...WHITE)
       doc.text(pillText, CX - pillTW / 2, PY + PH * 0.67)
  
-      // ── Property details ────────────────────────────────────────────────
       y += CH + 10
-      doc.setTextColor(...G)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(7)
-      doc.setCharSpace(0)
+      doc.setTextColor(...G); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setCharSpace(0)
       doc.text('PROPERTY DETAILS', M, y)
- 
       y += 3
-      doc.setDrawColor(...G)
-      doc.setLineWidth(0.25)
-      doc.line(M, y, W - M, y)
+      doc.setDrawColor(...G); doc.setLineWidth(0.25); doc.line(M, y, W - M, y)
       y += 3
  
       const details = [
@@ -336,7 +263,6 @@ export default function ResultCard({ result, onReset }: Props) {
         y += ROW
       })
  
-      // ── Comparable sales ────────────────────────────────────────────────
       if (comparables.length > 0) {
         y += 9
         doc.setTextColor(...G); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setCharSpace(0)
@@ -350,10 +276,10 @@ export default function ResultCard({ result, onReset }: Props) {
         doc.setTextColor(...WHITE); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setCharSpace(0)
         const HY = y + TH * 0.68
         doc.text('ADDRESS', M + 4, HY)
-        doc.text('SOLD',    86,    HY)
-        doc.text('PRICE',   108,   HY)
-        doc.text('SIZE',    132,   HY)
-        doc.text('DIST.',   152,   HY)
+        doc.text('SOLD',    86, HY)
+        doc.text('PRICE',  108, HY)
+        doc.text('SIZE',   132, HY)
+        doc.text('DIST.',  152, HY)
         y += TH
  
         comparables.forEach((comp, i) => {
@@ -377,25 +303,17 @@ export default function ResultCard({ result, onReset }: Props) {
  
       drawFooter()
  
-      // ════════════════════════════════════════════════════════════════════
+      // ══════════════════════════════════════════════════════════════
       // PAGE 2 — Market Context
-      // ════════════════════════════════════════════════════════════════════
+      // ══════════════════════════════════════════════════════════════
       doc.addPage()
- 
-      // Background + watermark
-      doc.setFillColor(...WARM)
-      doc.rect(0, 0, W, H, 'F')
-      wt(CX, H*0.50, 100, 0.08)
-      wt(CX, H*0.50,  65, 0.09)
-      wt(CX, H*0.50,  32, 0.10)
+      doc.setFillColor(...WARM); doc.rect(0, 0, W, H, 'F')
+      wt(CX, H*0.50, 100, 0.08); wt(CX, H*0.50, 65, 0.09); wt(CX, H*0.50, 32, 0.10)
  
       const HDR2 = drawHeader()
       const FH2  = 12
+      doc.setFillColor(...CARD); doc.rect(0, HDR2, W, H - HDR2 - FH2, 'F')
  
-      doc.setFillColor(...CARD)
-      doc.rect(0, HDR2, W, H - HDR2 - FH2, 'F')
- 
-      // Fetch market data
       let marketSummary: any = null
       let marketByCity: any[] = []
       try {
@@ -405,88 +323,61 @@ export default function ResultCard({ result, onReset }: Props) {
         ])
         marketSummary = ms
         marketByCity  = mc.data ?? []
-      } catch { /* market data unavailable */ }
+      } catch { /* unavailable */ }
  
       y = HDR2 + 10
-      doc.setTextColor(...DARK)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(16)
-      doc.setCharSpace(0)
+      doc.setTextColor(...DARK); doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setCharSpace(0)
       doc.text('Market Context', M, y)
- 
       y += 5.5
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-      doc.setTextColor(...MUTED)
-      doc.setCharSpace(0)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED); doc.setCharSpace(0)
       doc.text(`Greater Montréal & Laval · ${dateStr}`, M, y)
- 
       y += 4
-      doc.setDrawColor(...G)
-      doc.setLineWidth(0.4)
-      doc.line(M, y, W - M, y)
+      doc.setDrawColor(...G); doc.setLineWidth(0.4); doc.line(M, y, W - M, y)
       y += 8
  
       if (marketSummary) {
-        // ── Market stat cards (3 across) ──────────────────────────────────
-        const STATW = (CW - 8) / 3  // 3 cards with 4mm gaps
+        // ── 3 stat cards ─────────────────────────────────────────────
+        const STATW = (CW - 8) / 3
         const STATH = 22
  
         const statCards = [
-          { label: 'Greater Mtl Median', value: formatCAD(marketSummary.median_price) },
-          { label: 'Avg. Price / sq ft',  value: marketSummary.price_per_sqft ? `$${Math.round(marketSummary.price_per_sqft)}` : '—' },
-          { label: 'Market Trend',        value: marketSummary.market_trend ?? '—' },
+          { label: 'Greater Montréal Median', value: formatCAD(marketSummary.median_price) },
+          { label: 'Avg. Price / Sq Ft',      value: marketSummary.price_per_sqft ? `$${Math.round(marketSummary.price_per_sqft)}` : '—' },
+          { label: 'Market Trend',            value: marketSummary.market_trend ?? '—' },
         ]
  
         statCards.forEach((card, i) => {
           const sx = M + i * (STATW + 4)
-          doc.setFillColor(...WHITE)
-          doc.setDrawColor(...G)
-          doc.setLineWidth(0.25)
+          doc.setFillColor(...WHITE); doc.setDrawColor(...G); doc.setLineWidth(0.25)
           doc.roundedRect(sx, y, STATW, STATH, 2, 2, 'FD')
- 
-          // Green top accent
           doc.setFillColor(...G)
           doc.roundedRect(sx, y, STATW, 3, 1, 1, 'F')
           doc.rect(sx, y + 1, STATW, 2, 'F')
- 
-          doc.setTextColor(...MUTED)
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(6.5)
-          doc.setCharSpace(0)
+          doc.setTextColor(...MUTED); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setCharSpace(0)
           const labelW = doc.getTextWidth(card.label)
           doc.text(card.label, sx + STATW / 2 - labelW / 2, y + 9)
- 
-          doc.setTextColor(...DARK)
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(11)
-          doc.setCharSpace(0)
+          doc.setTextColor(...DARK); doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setCharSpace(0)
           const valueW = doc.getTextWidth(card.value)
           doc.text(card.value, sx + STATW / 2 - valueW / 2, y + 17)
         })
  
         y += STATH + 10
  
-        // ── YoY change ────────────────────────────────────────────────────
+        // ── YoY banner ───────────────────────────────────────────────
         if (marketSummary.yoy_change_pct !== null && marketSummary.yoy_change_pct !== undefined) {
           const yoyUp = marketSummary.yoy_change_pct >= 0
           doc.setFillColor(yoyUp ? 235 : 252, yoyUp ? 248 : 235, yoyUp ? 243 : 235)
           doc.roundedRect(M, y, CW, 12, 2, 2, 'F')
           doc.setTextColor(yoyUp ? 29 : 180, yoyUp ? 120 : 50, yoyUp ? 80 : 50)
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(9)
-          doc.setCharSpace(0)
-          const yoyText = `${yoyUp ? '↑' : '↓'} ${Math.abs(marketSummary.yoy_change_pct).toFixed(1)}% year-over-year price change in Greater Montréal`
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setCharSpace(0)
+          const yoyText = `${yoyUp ? '↑' : '↓'} ${Math.abs(marketSummary.yoy_change_pct).toFixed(1)}% year-over-year in Greater Montréal`
           const yoyW = doc.getTextWidth(yoyText)
           doc.text(yoyText, CX - yoyW / 2, y + 7.5)
           y += 20
         }
  
-        // ── This property vs market ───────────────────────────────────────
-        doc.setTextColor(...G)
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(7)
-        doc.setCharSpace(0)
+        // ── This property vs market ───────────────────────────────────
+        doc.setTextColor(...G); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setCharSpace(0)
         doc.text('THIS PROPERTY VS MARKET', M, y)
         y += 3
         doc.setDrawColor(...G); doc.setLineWidth(0.25); doc.line(M, y, W - M, y)
@@ -497,10 +388,10 @@ export default function ResultCard({ result, onReset }: Props) {
         )
  
         const compRows = [
-          ['Estimated value',      formatCAD(result.estimate)],
-          ['City median price',    cityData ? formatCAD(cityData.median_price) : '—'],
-          ['Greater Mtl median',   formatCAD(marketSummary.median_price)],
-          ['City transactions',    cityData ? cityData.count.toLocaleString() : '—'],
+          ['Estimated Value',         formatCAD(result.estimate)],
+          ['City Median Price',       cityData ? formatCAD(cityData.median_price) : '—'],
+          ['Greater Montréal Median', formatCAD(marketSummary.median_price)],
+          ['City Transactions',       cityData ? String(cityData.count) : '—'],
         ]
  
         compRows.forEach(([label, value], i) => {
@@ -513,7 +404,7 @@ export default function ResultCard({ result, onReset }: Props) {
           y += ROW
         })
  
-        // ── Estimate vs city median bar ───────────────────────────────────
+        // ── Estimate vs city median bars ──────────────────────────────
         if (cityData && cityData.median_price > 0) {
           y += 10
           doc.setTextColor(...G); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setCharSpace(0)
@@ -522,58 +413,47 @@ export default function ResultCard({ result, onReset }: Props) {
           doc.setDrawColor(...G); doc.setLineWidth(0.25); doc.line(M, y, W - M, y)
           y += 8
  
-          const BAR_H  = 8
-          const BAR_W  = CW
+          const BAR_H = 8, BAR_W = CW
           const maxVal = Math.max(result.estimate, cityData.median_price) * 1.15
  
           // Estimate bar
           const estW = (result.estimate / maxVal) * BAR_W
-          doc.setFillColor(237, 233, 224)
-          doc.roundedRect(M, y, BAR_W, BAR_H, 2, 2, 'F')
-          doc.setFillColor(...G)
-          doc.roundedRect(M, y, estW, BAR_H, 2, 2, 'F')
+          doc.setFillColor(237, 233, 224); doc.roundedRect(M, y, BAR_W, BAR_H, 2, 2, 'F')
+          doc.setFillColor(...G); doc.roundedRect(M, y, estW, BAR_H, 2, 2, 'F')
           doc.setTextColor(...WHITE); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setCharSpace(0)
           if (estW > 30) doc.text('Your estimate', M + 3, y + BAR_H * 0.68)
-          doc.setTextColor(...DARK); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5)
+          doc.setTextColor(...DARK); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setCharSpace(0)
           doc.text(formatCAD(result.estimate), M + BAR_W + 2, y + BAR_H * 0.68)
           y += BAR_H + 4
  
           // City median bar
           const medW = (cityData.median_price / maxVal) * BAR_W
-          doc.setFillColor(237, 233, 224)
-          doc.roundedRect(M, y, BAR_W, BAR_H, 2, 2, 'F')
-          doc.setFillColor(138, 148, 143)
-          doc.roundedRect(M, y, medW, BAR_H, 2, 2, 'F')
+          doc.setFillColor(237, 233, 224); doc.roundedRect(M, y, BAR_W, BAR_H, 2, 2, 'F')
+          doc.setFillColor(138, 148, 143); doc.roundedRect(M, y, medW, BAR_H, 2, 2, 'F')
           doc.setTextColor(...WHITE); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setCharSpace(0)
           if (medW > 30) doc.text(`${cap(result.city ?? '')} median`, M + 3, y + BAR_H * 0.68)
-          doc.setTextColor(...DARK); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5)
+          doc.setTextColor(...DARK); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setCharSpace(0)
           doc.text(formatCAD(cityData.median_price), M + BAR_W + 2, y + BAR_H * 0.68)
           y += BAR_H + 10
  
-          // Difference callout
+          // Callout
           const diff    = result.estimate - cityData.median_price
           const diffPct = ((diff / cityData.median_price) * 100).toFixed(1)
           const above   = diff >= 0
           doc.setFillColor(above ? 29 : 208, above ? 158 : 75, above ? 117 : 75)
           doc.roundedRect(M, y, CW, 11, 2, 2, 'F')
-          doc.setTextColor(...WHITE); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setCharSpace(0)
+          doc.setTextColor(...WHITE); doc.setFont('helvetica', 'bold'); doc.setCharSpace(0)
           const callout = `This property is estimated ${above ? 'above' : 'below'} the ${cap(result.city ?? '')} median by ${formatCAD(Math.abs(diff))} (${Math.abs(Number(diffPct))}%)`
-          const calloutW = doc.getTextWidth(callout)
-          // If too wide, use smaller font
-          if (calloutW > CW - 6) {
-            doc.setFontSize(6.5)
-          }
+          doc.setFontSize(8)
+          doc.setCharSpace(0)
+          if (doc.getTextWidth(callout) > CW - 6) doc.setFontSize(6.5)
           doc.setCharSpace(0)
           const cw2 = doc.getTextWidth(callout)
           doc.text(callout, CX - cw2 / 2, y + 7)
         }
       } else {
-        // Market data unavailable
         y += 10
-        doc.setTextColor(...MUTED)
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(10)
-        doc.setCharSpace(0)
+        doc.setTextColor(...MUTED); doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setCharSpace(0)
         drawCentered('Market data unavailable.', y)
       }
  
@@ -590,7 +470,6 @@ export default function ResultCard({ result, onReset }: Props) {
   return (
     <div className="animate-fade-up" style={{ width: '100%', maxWidth: 560, margin: '0 auto' }}>
  
-      {/* ── Main estimate card ── */}
       <div className="card-elevated" style={{ padding: '40px 36px', textAlign: 'center', marginBottom: 16 }}>
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--green)', marginBottom: 20 }}>
           Estimated Market Value
@@ -602,7 +481,6 @@ export default function ResultCard({ result, onReset }: Props) {
           {formatCAD(result.range_low)} — {formatCAD(result.range_high)}
         </p>
  
-        {/* Confidence bar */}
         <div style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>Confidence</span>
@@ -627,7 +505,6 @@ export default function ResultCard({ result, onReset }: Props) {
         )}
       </div>
  
-      {/* ── Comparable Sales ── */}
       <div style={{ marginBottom: 16 }}>
         {isSignedIn ? (
           <div style={{ background: '#faf7f2', border: '0.5px solid rgba(29,158,117,0.18)', borderRadius: 14, padding: '24px' }}>
@@ -664,7 +541,6 @@ export default function ResultCard({ result, onReset }: Props) {
         )}
       </div>
  
-      {/* ── Disclaimer ── */}
       <div style={{ padding: '14px 20px', textAlign: 'center', marginBottom: 20 }}>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
           This estimate is for informational purposes only and does not constitute a formal appraisal.
@@ -672,7 +548,6 @@ export default function ResultCard({ result, onReset }: Props) {
         </p>
       </div>
  
-      {/* ── Action buttons ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {isSignedIn && (
           <button onClick={handleDownloadPDF} disabled={pdfLoading} style={{ width: '100%', padding: '14px', background: 'transparent', border: '1.5px solid #1D9E75', borderRadius: 10, color: '#1D9E75', fontSize: 14, fontWeight: 500, cursor: pdfLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
