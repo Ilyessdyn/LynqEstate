@@ -179,7 +179,7 @@ export default function ResultCard({ result, onReset }: Props) {
       doc.setTextColor(...muted)
       doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
-      doc.text(`Model: ${result.model_version}   |   Currency: ${result.currency}   |   Data: 200,000+ Greater Montréal transactions`, 22, 90)
+      doc.text(`Greater Montréal & Laval · Quebec, Canada`, 22, 90)
  
       // ── Property details ──
       let y = 110
