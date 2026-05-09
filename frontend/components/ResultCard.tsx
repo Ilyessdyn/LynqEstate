@@ -237,21 +237,26 @@ export default function ResultCard({ result, onReset }: Props) {
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(6.5)
       doc.setCharSpace(1.8)
-      doc.text('ESTIMATED MARKET VALUE', CX, y + CSTRY * 0.67, { align: 'center' })
+      const emvText = 'ESTIMATED MARKET VALUE'
+      doc.text(emvText, CX - doc.getTextWidth(emvText) / 2, y + CSTRY * 0.67)
+
       doc.setCharSpace(0)
  
       // Price — centered
       doc.setTextColor(...DARK)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(26)
-      doc.text(formatCAD(result.estimate), CX, y + CSTRY + 13, { align: 'center' })
+      const priceText = formatCAD(result.estimate)
+      doc.text(priceText, CX - doc.getTextWidth(priceText) / 2, y + CSTRY + 13)
+
  
       // Range label — centered, spaced letters
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(6.5)
       doc.setTextColor(...MUTED)
       doc.setCharSpace(1.4)
-      doc.text('ESTIMATED RANGE', CX, y + CSTRY + 20, { align: 'center' })
+      const rangeLabel = 'ESTIMATED RANGE'
+      doc.text(rangeLabel, CX - doc.getTextWidth(rangeLabel) / 2, y + CSTRY + 20)
       doc.setCharSpace(0)
  
       // Range values — centered
@@ -274,7 +279,8 @@ export default function ResultCard({ result, onReset }: Props) {
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(5.8)
       doc.setCharSpace(0.5)
-      doc.text(`${result.confidence.toUpperCase()} CONFIDENCE`, CX, PY + PH * 0.67, { align: 'center' })
+      const pillText = `${result.confidence.toUpperCase()} CONFIDENCE`
+      doc.text(pillText, CX - doc.getTextWidth(pillText) / 2, PY + PH * 0.67)
       doc.setCharSpace(0)
  
       // ── 7. Property details ───────────────────────────────────────────────
