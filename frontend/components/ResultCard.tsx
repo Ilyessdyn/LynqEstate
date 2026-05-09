@@ -159,7 +159,7 @@ export default function ResultCard({ result, onReset }: Props) {
       // ── Header area ───────────────────────────────────────────────────────
       // Dark header band
       doc.setFillColor(...greenDark)
-      doc.rect(5, 0, PAGE_W - 5, 26, 'F')
+      doc.rect(0, 0, PAGE_W, 26, 'F')
  
       // Small logo triangle in header
       doc.setFillColor(255, 255, 255)
@@ -230,7 +230,12 @@ export default function ResultCard({ result, onReset }: Props) {
       doc.setFontSize(9.5)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...muted)
-      doc.text(`${formatCAD(result.range_low)}  —  ${formatCAD(result.range_high)}`, cardX + 8, cardY + 38)
+      doc.setTextColor(...muted)
+      doc.setFontSize(7)
+      doc.setFont('helvetica', 'normal')
+      doc.text('ESTIMATED RANGE', cardX + 8, cardY + 33)
+      doc.setFontSize(9.5)
+      doc.text(`${formatCAD(result.range_low)}  —  ${formatCAD(result.range_high)}`, cardX + 8, cardY + 40)
  
       // Confidence pill
       if (result.confidence === 'high') {
@@ -242,12 +247,12 @@ export default function ResultCard({ result, onReset }: Props) {
       }
       const pillX = cardX + cardW - 60
       const pillY = cardY + 8
-      doc.roundedRect(pillX, pillY, 52, 9, 2, 2, 'F')
+      doc.roundedRect(pillX, pillY, 62, 9, 2, 2, 'F')
       doc.setTextColor(...white)
       doc.setFontSize(7)
       doc.setFont('helvetica', 'bold')
       doc.setCharSpace(0.8)
-      doc.text(`${result.confidence.toUpperCase()} CONFIDENCE`, pillX + 26, pillY + 5.8, { align: 'center' })
+      doc.text(`${result.confidence.toUpperCase()} CONFIDENCE`, pillX + 31, pillY + 5.8, { align: 'center' })
       doc.setCharSpace(0)
  
       // Date on card bottom right
@@ -278,7 +283,7 @@ export default function ResultCard({ result, onReset }: Props) {
         ['City',          result.city ? result.city.charAt(0).toUpperCase() + result.city.slice(1) : '—'],
         ['Property type', capitalize(result.property_type ?? '—')],
         ['Year built',    String(result.year_built ?? '—')],
-        ['Floor area',    result.floor_area ? `${Math.round(result.floor_area).toLocaleString()} sq ft` : '—'],
+        ['Floor area', result.floor_area ? `${Math.round(result.floor_area)} sq ft` : '—'],
       ]
  
       details.forEach(([label, value], i) => {
@@ -355,7 +360,7 @@ export default function ResultCard({ result, onReset }: Props) {
       // ── Footer ────────────────────────────────────────────────────────────
       // Dark footer band
       doc.setFillColor(...greenDark)
-      doc.rect(5, PAGE_H - 14, PAGE_W - 5, 14, 'F')
+      doc.rect(0, PAGE_H - 14, PAGE_W, 14, 'F')
  
       // Green left accent continues
       doc.setFillColor(...green)
@@ -442,23 +447,7 @@ export default function ResultCard({ result, onReset }: Props) {
  
         <div style={{ height: 1, background: 'var(--border-subtle)', marginBottom: 24 }} />
  
-        {/* Meta */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap' }}>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Data source</p>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Real Greater Montreal transactions</p>
-          </div>
-          <div style={{ width: 1, background: 'var(--border-subtle)' }} />
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Model</p>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{result.model_version}</p>
-          </div>
-          <div style={{ width: 1, background: 'var(--border-subtle)' }} />
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Currency</p>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{result.currency}</p>
-          </div>
-        </div>
+        
       </div>
  
       {/* ── Comparable Sales Section ── */}
