@@ -115,159 +115,262 @@ export default function ResultCard({ result, onReset }: Props) {
       const { jsPDF } = await import('jspdf')
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
  
-      const green  = [29, 158, 117] as const
-      const dark   = [26, 36, 32] as const
-      const muted  = [120, 130, 125] as const
-      const bgCard = [250, 247, 242] as const
+      // ── Palette ───────────────────────────────────────────────────────────
+      const green     = [29, 158, 117]  as const
+      const greenDark = [8,  80,  65]   as const
+      const dark      = [26, 36,  32]   as const
+      const muted     = [120,130, 125]  as const
+      const bgWarm    = [245,240, 232]  as const
+      const bgCard    = [250,247, 242]  as const
+      const white     = [255,255, 255]  as const
  
-      // ── Header ──
+      const PAGE_W = 210
+      const PAGE_H = 297
+      const MARGIN = 16
+ 
+      // ── Full-page warm background ─────────────────────────────────────────
+      doc.setFillColor(...bgWarm)
+      doc.rect(0, 0, PAGE_W, PAGE_H, 'F')
+ 
+      // ── Watermark triangle logo (large, very low opacity) ─────────────────
+      // Draw 3 stacked triangles as the watermark
+      const drawTriangle = (cx: number, cy: number, size: number, r: number, g: number, b: number, opacity: number) => {
+        doc.setFillColor(r, g, b)
+        doc.setGState(doc.GState({ opacity }))
+        // Triangle using lines — jsPDF triangle via polygon points
+        const pts = [
+          { x: cx,          y: cy - size * 0.6 },
+          { x: cx - size * 0.5, y: cy + size * 0.4 },
+          { x: cx + size * 0.5, y: cy + size * 0.4 },
+        ]
+        doc.triangle(pts[0].x, pts[0].y, pts[1].x, pts[1].y, pts[2].x, pts[2].y, 'F')
+        doc.setGState(doc.GState({ opacity: 1 }))
+      }
+ 
+      // Big watermark — center-right of page
+      drawTriangle(155, 160, 120, 29, 158, 117, 0.04)
+      drawTriangle(155, 160, 80,  29, 158, 117, 0.04)
+      drawTriangle(155, 160, 42,  29, 158, 117, 0.05)
+ 
+      // ── Left accent bar ───────────────────────────────────────────────────
       doc.setFillColor(...green)
-      doc.rect(0, 0, 210, 18, 'F')
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(13)
+      doc.rect(0, 0, 5, PAGE_H, 'F')
+ 
+      // ── Header area ───────────────────────────────────────────────────────
+      // Dark header band
+      doc.setFillColor(...greenDark)
+      doc.rect(5, 0, PAGE_W - 5, 26, 'F')
+ 
+      // Small logo triangle in header
+      doc.setFillColor(255, 255, 255)
+      doc.setGState(doc.GState({ opacity: 0.95 }))
+      doc.triangle(18, 6, 13, 20, 23, 20, 'F')
+      doc.setGState(doc.GState({ opacity: 1 }))
+ 
+      // Brand name
+      doc.setTextColor(...white)
+      doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
-      doc.text('LynqEstate', 14, 12)
+      doc.text('LynqEstate', 28, 16)
+ 
+      // Tagline right-aligned
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(200, 235, 220)
+      doc.text('Real Estate Valuation Report', PAGE_W - MARGIN, 11, { align: 'right' })
+      doc.text('Greater Montréal & Laval · Quebec, Canada', PAGE_W - MARGIN, 18, { align: 'right' })
+ 
+      // ── Report title block ────────────────────────────────────────────────
+      doc.setTextColor(...dark)
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Property Valuation', MARGIN + 2, 42)
+ 
       doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
-      doc.text('Real Estate Valuation Report', 210 - 14, 12, { align: 'right' })
- 
-      // ── Title ──
-      doc.setTextColor(...dark)
-      doc.setFontSize(22)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Property Valuation Report', 14, 34)
- 
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
       doc.setTextColor(...muted)
-      doc.text(`Generated on ${new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 41)
+      const dateStr = new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })
+      doc.text(`Report generated on ${dateStr}`, MARGIN + 2, 50)
  
-      // ── Estimate card ──
+      // Thin green rule under title
+      doc.setDrawColor(...green)
+      doc.setLineWidth(0.4)
+      doc.line(MARGIN + 2, 53, PAGE_W - MARGIN, 53)
+ 
+      // ── Estimate hero card ────────────────────────────────────────────────
+      const cardX = MARGIN + 2
+      const cardY = 58
+      const cardW = PAGE_W - MARGIN * 2 - 4
+      const cardH = 50
+ 
       doc.setFillColor(...bgCard)
-      doc.roundedRect(14, 48, 182, 48, 3, 3, 'F')
+      doc.setDrawColor(...green)
+      doc.setLineWidth(0.3)
+      doc.roundedRect(cardX, cardY, cardW, cardH, 3, 3, 'FD')
  
+      // Green left accent on card
+      doc.setFillColor(...green)
+      doc.roundedRect(cardX, cardY, 3, cardH, 1, 1, 'F')
+ 
+      // Label
       doc.setTextColor(...green)
-      doc.setFontSize(9)
+      doc.setFontSize(7.5)
       doc.setFont('helvetica', 'bold')
-      doc.text('ESTIMATED MARKET VALUE', 22, 58)
+      doc.setCharSpace(1.5)
+      doc.text('ESTIMATED MARKET VALUE', cardX + 8, cardY + 10)
+      doc.setCharSpace(0)
  
+      // Price
       doc.setTextColor(...dark)
-      doc.setFontSize(28)
+      doc.setFontSize(30)
       doc.setFont('helvetica', 'bold')
-      doc.text(formatCAD(result.estimate), 22, 72)
+      doc.text(formatCAD(result.estimate), cardX + 8, cardY + 28)
  
-      doc.setFontSize(11)
+      // Range
+      doc.setFontSize(9.5)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...muted)
-      doc.text(`Range: ${formatCAD(result.range_low)} — ${formatCAD(result.range_high)}`, 22, 82)
+      doc.text(`${formatCAD(result.range_low)}  —  ${formatCAD(result.range_high)}`, cardX + 8, cardY + 38)
  
-      // Confidence badge
+      // Confidence pill
       if (result.confidence === 'high') {
         doc.setFillColor(29, 158, 117)
-    } else if (result.confidence === 'medium') {
+      } else if (result.confidence === 'medium') {
         doc.setFillColor(240, 165, 0)
-    } else {
+      } else {
         doc.setFillColor(224, 92, 92)
-}
-      doc.roundedRect(130, 54, 56, 10, 2, 2, 'F')
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(8)
+      }
+      const pillX = cardX + cardW - 60
+      const pillY = cardY + 8
+      doc.roundedRect(pillX, pillY, 52, 9, 2, 2, 'F')
+      doc.setTextColor(...white)
+      doc.setFontSize(7)
       doc.setFont('helvetica', 'bold')
-      doc.text(`${result.confidence.toUpperCase()} CONFIDENCE`, 158, 60.5, { align: 'center' })
+      doc.setCharSpace(0.8)
+      doc.text(`${result.confidence.toUpperCase()} CONFIDENCE`, pillX + 26, pillY + 5.8, { align: 'center' })
+      doc.setCharSpace(0)
  
-      // Meta row
+      // Date on card bottom right
       doc.setTextColor(...muted)
-      doc.setFontSize(9)
+      doc.setFontSize(7)
       doc.setFont('helvetica', 'normal')
-      doc.text(`Greater Montréal & Laval · Quebec, Canada`, 22, 90)
+      doc.text(dateStr, cardX + cardW - 4, cardY + cardH - 5, { align: 'right' })
  
-      // ── Property details ──
-      let y = 110
+      // ── Property details ──────────────────────────────────────────────────
+      let y = cardY + cardH + 14
+ 
       doc.setTextColor(...green)
-      doc.setFontSize(10)
+      doc.setFontSize(7.5)
       doc.setFont('helvetica', 'bold')
-      doc.text('PROPERTY DETAILS', 14, y)
-      y += 6
+      doc.setCharSpace(1.5)
+      doc.text('PROPERTY DETAILS', MARGIN + 2, y)
+      doc.setCharSpace(0)
+      y += 4
  
-      doc.setDrawColor(29, 158, 117)
+      doc.setDrawColor(...green)
       doc.setLineWidth(0.3)
-      doc.line(14, y, 196, y)
-      y += 8
+      doc.line(MARGIN + 2, y, PAGE_W - MARGIN, y)
+      y += 7
+ 
+      const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—'
  
       const details = [
-        ['City', result.city ?? '—'],
-        ['Property type', result.property_type ?? '—'],
-        ['Year built', String(result.year_built ?? '—')],
-        ['Floor area', result.floor_area ? `${Math.round(result.floor_area)} sq ft` : '—'],
+        ['City',          result.city ? result.city.charAt(0).toUpperCase() + result.city.slice(1) : '—'],
+        ['Property type', capitalize(result.property_type ?? '—')],
+        ['Year built',    String(result.year_built ?? '—')],
+        ['Floor area',    result.floor_area ? `${Math.round(result.floor_area).toLocaleString()} sq ft` : '—'],
       ]
  
-      doc.setFont('helvetica', 'normal')
-      details.forEach(([label, value]) => {
+      details.forEach(([label, value], i) => {
+        if (i % 2 === 0) {
+          doc.setFillColor(242, 239, 233)
+          doc.rect(MARGIN + 2, y - 4, cardW, 7.5, 'F')
+        }
         doc.setTextColor(...muted)
-        doc.setFontSize(9)
-        doc.text(label, 14, y)
+        doc.setFontSize(8.5)
+        doc.setFont('helvetica', 'normal')
+        doc.text(label, MARGIN + 5, y + 1)
         doc.setTextColor(...dark)
-        doc.setFontSize(9)
-        doc.text(value, 80, y)
-        y += 7
+        doc.setFont('helvetica', 'bold')
+        doc.text(value, 90, y + 1)
+        y += 8
       })
  
-      // ── Comparables ──
+      // ── Comparable sales ──────────────────────────────────────────────────
       if (comparables.length > 0) {
-        y += 6
-        doc.setTextColor(...green)
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'bold')
-        doc.text('COMPARABLE SALES', 14, y)
-        y += 6
- 
-        doc.setDrawColor(29, 158, 117)
-        doc.line(14, y, 196, y)
         y += 8
  
-        // Table header
-        doc.setFillColor(240, 248, 244)
-        doc.rect(14, y - 4, 182, 8, 'F')
-        doc.setTextColor(...muted)
-        doc.setFontSize(8)
+        doc.setTextColor(...green)
+        doc.setFontSize(7.5)
         doc.setFont('helvetica', 'bold')
-        doc.text('ADDRESS', 16, y + 1)
-        doc.text('SOLD', 100, y + 1)
+        doc.setCharSpace(1.5)
+        doc.text('COMPARABLE SALES', MARGIN + 2, y)
+        doc.setCharSpace(0)
+        y += 4
+ 
+        doc.setDrawColor(...green)
+        doc.setLineWidth(0.3)
+        doc.line(MARGIN + 2, y, PAGE_W - MARGIN, y)
+        y += 7
+ 
+        // Table header
+        doc.setFillColor(...green)
+        doc.rect(MARGIN + 2, y - 4, cardW, 8, 'F')
+        doc.setTextColor(...white)
+        doc.setFontSize(7)
+        doc.setFont('helvetica', 'bold')
+        doc.setCharSpace(0.8)
+        doc.text('ADDRESS', MARGIN + 5, y + 1)
+        doc.text('SOLD', 108, y + 1)
         doc.text('PRICE', 135, y + 1)
         doc.text('SIZE', 163, y + 1)
-        doc.text('DIST.', 185, y + 1)
+        doc.text('DIST.', 187, y + 1)
+        doc.setCharSpace(0)
         y += 10
  
-        doc.setFont('helvetica', 'normal')
         comparables.forEach((comp, i) => {
-          if (y > 270) return
+          if (y > 272) return
           if (i % 2 === 0) {
             doc.setFillColor(...bgCard)
-            doc.rect(14, y - 4, 182, 8, 'F')
+            doc.rect(MARGIN + 2, y - 4, cardW, 8.5, 'F')
           }
           doc.setTextColor(...dark)
           doc.setFontSize(8)
-          const street = comp.street.length > 30 ? comp.street.substring(0, 28) + '…' : comp.street
-          doc.text(street, 16, y + 1)
+          doc.setFont('helvetica', 'normal')
+          const street = comp.street.length > 32 ? comp.street.substring(0, 30) + '…' : comp.street
+          doc.text(street, MARGIN + 5, y + 1)
           doc.setTextColor(...muted)
-          doc.text(comp.sale_date, 100, y + 1)
+          doc.text(comp.sale_date, 108, y + 1)
           doc.setTextColor(...dark)
+          doc.setFont('helvetica', 'bold')
           doc.text(formatCAD(comp.sale_amount), 135, y + 1)
+          doc.setFont('helvetica', 'normal')
           doc.setTextColor(...muted)
-          doc.text(`${Math.round(comp.floor_area_sqft)} sf`, 163, y + 1)        
+          doc.text(`${Math.round(comp.floor_area_sqft)} sf`, 163, y + 1)
+          doc.text(`${comp.distance_km} km`, 187, y + 1)
           y += 9
         })
       }
  
-      // ── Footer ──
+      // ── Footer ────────────────────────────────────────────────────────────
+      // Dark footer band
+      doc.setFillColor(...greenDark)
+      doc.rect(5, PAGE_H - 14, PAGE_W - 5, 14, 'F')
+ 
+      // Green left accent continues
       doc.setFillColor(...green)
-      doc.rect(0, 287, 210, 10, 'F')
-      doc.setTextColor(255, 255, 255)
+      doc.rect(0, PAGE_H - 14, 5, 14, 'F')
+ 
+      doc.setTextColor(200, 235, 220)
       doc.setFontSize(7)
       doc.setFont('helvetica', 'normal')
-      doc.text('LynqEstate · lynqestate.com · For informational purposes only. Does not constitute a formal appraisal.', 105, 293, { align: 'center' })
+      doc.text('lynqestate.com', MARGIN, PAGE_H - 6)
+      doc.setTextColor(160, 200, 180)
+      doc.text('For informational purposes only. This report does not constitute a formal appraisal.', PAGE_W / 2, PAGE_H - 6, { align: 'center' })
+      doc.setTextColor(200, 235, 220)
+      doc.text(`© ${new Date().getFullYear()} LynqEstate`, PAGE_W - MARGIN, PAGE_H - 6, { align: 'right' })
  
-      doc.save(`LynqEstate-Report-${result.city ?? 'Property'}-${new Date().toISOString().slice(0, 10)}.pdf`)
+      doc.save(`LynqEstate-${result.city ?? 'Report'}-${new Date().toISOString().slice(0, 10)}.pdf`)
     } catch (e) {
       console.error('PDF generation failed:', e)
     } finally {
@@ -339,7 +442,23 @@ export default function ResultCard({ result, onReset }: Props) {
  
         <div style={{ height: 1, background: 'var(--border-subtle)', marginBottom: 24 }} />
  
-        
+        {/* Meta */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Data source</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Real Greater Montreal transactions</p>
+          </div>
+          <div style={{ width: 1, background: 'var(--border-subtle)' }} />
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Model</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{result.model_version}</p>
+          </div>
+          <div style={{ width: 1, background: 'var(--border-subtle)' }} />
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Currency</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{result.currency}</p>
+          </div>
+        </div>
       </div>
  
       {/* ── Comparable Sales Section ── */}
