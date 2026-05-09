@@ -113,168 +113,187 @@ export default function ResultCard({ result, onReset }: Props) {
       const { jsPDF } = await import('jspdf')
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
  
-      // ── Layout constants ─────────────────────────────────────────────────
+      // ── Constants ─────────────────────────────────────────────────────────
       const W     = 210
       const H     = 297
-      const M     = 14
-      const INNER = W - M * 2   // 182mm content width
+      const M     = 14          // outer margin
+      const IP    = 4           // inner padding inside content area
       const CX    = W / 2       // horizontal center
  
-      // ── Palette ──────────────────────────────────────────────────────────
-      const G      = [29,  158, 117] as const
-      const GD     = [15,  75,  55]  as const
+      // Column positions for comparable table (mm from left)
+      const COL_ADDR  = M + IP
+      const COL_SOLD  = 118
+      const COL_PRICE = 143
+      const COL_SIZE  = 167
+      const COL_DIST  = 189
+ 
+      // ── Palette ───────────────────────────────────────────────────────────
+      const GD     = [15,  70,  50]  as const   // dark green (header/footer)
+      const G      = [29,  158, 117] as const   // brand green
       const DARK   = [26,  36,  32]  as const
-      const MUTED  = [130, 140, 135] as const
-      const WARM   = [245, 240, 232] as const
-      const CARD   = [252, 249, 244] as const
+      const MUTED  = [138, 148, 143] as const
+      const WARM   = [245, 240, 232] as const   // page bg
+      const CARD   = [250, 247, 242] as const   // main content bg
       const WHITE  = [255, 255, 255] as const
-      const STRIPE = [238, 234, 226] as const
+      const STRIPE = [237, 233, 224] as const   // alternating row
  
       const cap = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—'
       const dateStr = new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })
+      const ROW = 8.5   // standard row height
  
-      // ── 1. Warm background ────────────────────────────────────────────────
+      // ── 1. Warm page background ───────────────────────────────────────────
       doc.setFillColor(...WARM)
       doc.rect(0, 0, W, H, 'F')
  
-      // ── 2. Watermark — 3 triangles centered on page ───────────────────────
-      // Simulate low opacity by blending green with warm bg
-      const blend = (g: number, b: number, a: number) =>
-        Math.round(g + (b - g) * (1 - a))
-      const triColor = (a: number) => [
-        blend(29,  245, a),
-        blend(158, 240, a),
-        blend(117, 232, a),
-      ] as const
- 
-      const drawTri = (cx: number, cy: number, s: number, color: readonly [number,number,number]) => {
-        doc.setFillColor(...color)
+      // ── 2. Centered watermark — 3 nested triangles ────────────────────────
+      // Blend green into warm bg at low opacity
+      const blendC = (g: number, bg: number, a: number) => Math.round(bg + (g - bg) * a)
+      const wc1 = [blendC(29,245,0.08), blendC(158,240,0.08), blendC(117,232,0.08)] as const
+      const wc2 = [blendC(29,245,0.09), blendC(158,240,0.09), blendC(117,232,0.09)] as const
+      const wc3 = [blendC(29,245,0.10), blendC(158,240,0.10), blendC(117,232,0.10)] as const
+      const wtri = (cx: number, cy: number, s: number, c: readonly [number,number,number]) => {
+        doc.setFillColor(...c)
         doc.triangle(cx, cy - s * 0.65, cx - s * 0.55, cy + s * 0.38, cx + s * 0.55, cy + s * 0.38, 'F')
       }
-      drawTri(CX, H * 0.52, 105, triColor(0.09))
-      drawTri(CX, H * 0.52,  68, triColor(0.09))
-      drawTri(CX, H * 0.52,  34, triColor(0.10))
+      wtri(CX, H * 0.50, 100, wc1)
+      wtri(CX, H * 0.50,  65, wc2)
+      wtri(CX, H * 0.50,  32, wc3)
  
-      // ── 3. Header — full width dark green ────────────────────────────────
-      const HDR = 28
+      // ── 3. HEADER — full-width dark green ────────────────────────────────
+      const HDR = 26
       doc.setFillColor(...GD)
       doc.rect(0, 0, W, HDR, 'F')
  
-      // Logo triangle — vertically centered in header
+      // Logo triangle — vertically centered
       const LY = HDR / 2
-      const LS = 6.5
+      const LS = 6
       const LX = M + LS
       doc.setFillColor(...WHITE)
-      doc.triangle(LX, LY - LS, LX - LS * 0.85, LY + LS * 0.6, LX + LS * 0.85, LY + LS * 0.6, 'F')
+      doc.triangle(LX, LY - LS, LX - LS * 0.85, LY + LS * 0.62, LX + LS * 0.85, LY + LS * 0.62, 'F')
  
-      // Brand name
+      // Brand name — vertically centered next to triangle
       doc.setTextColor(...WHITE)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(13)
-      doc.text('LynqEstate', LX + LS + 2.5, LY + 1.8)
+      doc.text('LynqEstate', LX + LS + 2, LY + 1.6)
  
-      // Right — two lines vertically centered
+      // Right taglines — two lines centered in header height
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(7.5)
       doc.setTextColor(185, 228, 210)
       doc.text('Real Estate Valuation Report', W - M, LY - 2.5, { align: 'right' })
       doc.setFontSize(6.5)
-      doc.setTextColor(145, 200, 178)
+      doc.setTextColor(148, 198, 175)
       doc.text('Greater Montréal & Laval · Quebec, Canada', W - M, LY + 4, { align: 'right' })
  
-      // ── 4. Page title ─────────────────────────────────────────────────────
-      let y = HDR + 11
+      // ── 4. White content card (between header and footer) ─────────────────
+      const FH    = 12        // footer height
+      const CONT_Y = HDR      // content starts right after header
+      const CONT_H = H - HDR - FH
+      doc.setFillColor(...CARD)
+      doc.rect(0, CONT_Y, W, CONT_H, 'F')
+ 
+      // ── 5. Title block ────────────────────────────────────────────────────
+      let y = CONT_Y + 10
       doc.setTextColor(...DARK)
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(17)
+      doc.setFontSize(16)
       doc.text('Property Valuation Report', M, y)
  
-      y += 6
+      y += 5.5
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
       doc.setTextColor(...MUTED)
       doc.text(`Generated on ${dateStr}`, M, y)
  
+      // Thin green rule
       y += 4
       doc.setDrawColor(...G)
-      doc.setLineWidth(0.5)
+      doc.setLineWidth(0.4)
       doc.line(M, y, W - M, y)
  
-      // ── 5. Estimate card ─────────────────────────────────────────────────
+      // ── 6. Estimate card ─────────────────────────────────────────────────
       y += 5
-      const CH = 52
-      const STRIPE_H = 9
+      const CH     = 54        // card total height
+      const CSTX   = M         // card start x
+      const CW     = W - M * 2 // card width = INNER = 182
+      const CSTRY  = 9         // green stripe height
  
-      // Card bg + border
-      doc.setFillColor(...CARD)
+      // Card border
       doc.setDrawColor(...G)
-      doc.setLineWidth(0.25)
-      doc.roundedRect(M, y, INNER, CH, 2, 2, 'FD')
+      doc.setLineWidth(0.3)
+      doc.setFillColor(...WHITE)
+      doc.roundedRect(CSTX, y, CW, CH, 2, 2, 'FD')
  
-      // Green top stripe — full width inside card
+      // Green top stripe — draw AFTER card so it clips inside border
+      // Use rect for stripe body + roundedRect for top corners
       doc.setFillColor(...G)
-      doc.roundedRect(M, y, INNER, STRIPE_H, 2, 2, 'F')
-      doc.rect(M, y + STRIPE_H - 4, INNER, 4, 'F') // fill rounded corners
+      doc.roundedRect(CSTX, y, CW, CSTRY, 2, 2, 'F')
+      // Fill bottom part of rounded top to make it square at the bottom
+      doc.rect(CSTX, y + CSTRY - 3, CW, 3, 'F')
  
-      // "ESTIMATED MARKET VALUE" — centered in stripe
+      // "ESTIMATED MARKET VALUE" — perfectly centered in stripe
       doc.setTextColor(...WHITE)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(6.5)
       doc.setCharSpace(1.8)
-      doc.text('ESTIMATED MARKET VALUE', CX, y + 6, { align: 'center' })
+      doc.text('ESTIMATED MARKET VALUE', CX, y + CSTRY * 0.67, { align: 'center' })
       doc.setCharSpace(0)
  
       // Price — centered
       doc.setTextColor(...DARK)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(26)
-      doc.text(formatCAD(result.estimate), CX, y + 22, { align: 'center' })
+      doc.text(formatCAD(result.estimate), CX, y + CSTRY + 13, { align: 'center' })
  
-      // Range label — centered
+      // Range label — centered, spaced letters
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(6.5)
       doc.setTextColor(...MUTED)
-      doc.setCharSpace(1.2)
-      doc.text('ESTIMATED RANGE', CX, y + 30, { align: 'center' })
+      doc.setCharSpace(1.4)
+      doc.text('ESTIMATED RANGE', CX, y + CSTRY + 20, { align: 'center' })
       doc.setCharSpace(0)
  
       // Range values — centered
       doc.setFontSize(9)
-      doc.text(`${formatCAD(result.range_low)}  —  ${formatCAD(result.range_high)}`, CX, y + 37, { align: 'center' })
+      doc.text(
+        `${formatCAD(result.range_low)}  —  ${formatCAD(result.range_high)}`,
+        CX, y + CSTRY + 27, { align: 'center' }
+      )
  
-      // Confidence pill — centered at bottom
-      if (result.confidence === 'high') { doc.setFillColor(29, 158, 117) }
-      else if (result.confidence === 'medium') { doc.setFillColor(225, 152, 0) }
-      else { doc.setFillColor(208, 75, 75) }
-      const PW = 54
-      const PH = 8
-      const PX = CX - PW / 2
-      const PY = y + CH - PH - 3.5
-      doc.roundedRect(PX, PY, PW, PH, 2, 2, 'F')
+      // Confidence pill — fully rounded, centered, compact
+      if (result.confidence === 'high')        doc.setFillColor(29,  158, 117)
+      else if (result.confidence === 'medium') doc.setFillColor(224, 152, 0)
+      else                                     doc.setFillColor(208, 75,  75)
+ 
+      const PW = 48, PH = 7
+      const PX  = CX - PW / 2
+      const PY  = y + CH - PH - 4
+      doc.roundedRect(PX, PY, PW, PH, PH / 2, PH / 2, 'F')  // fully rounded pill
       doc.setTextColor(...WHITE)
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(6)
-      doc.setCharSpace(0.9)
-      doc.text(`${result.confidence.toUpperCase()} CONFIDENCE`, CX, PY + PH * 0.65, { align: 'center' })
+      doc.setFontSize(5.8)
+      doc.setCharSpace(1.0)
+      doc.text(`${result.confidence.toUpperCase()} CONFIDENCE`, CX, PY + PH * 0.67, { align: 'center' })
       doc.setCharSpace(0)
  
-      // ── 6. Property details ───────────────────────────────────────────────
+      // ── 7. Property details ───────────────────────────────────────────────
       y += CH + 10
  
+      // Section header row
       doc.setTextColor(...G)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(6.5)
-      doc.setCharSpace(1.8)
+      doc.setCharSpace(2.0)
       doc.text('PROPERTY DETAILS', M, y)
       doc.setCharSpace(0)
  
       y += 3
       doc.setDrawColor(...G)
-      doc.setLineWidth(0.3)
+      doc.setLineWidth(0.25)
       doc.line(M, y, W - M, y)
-      y += 4
+      y += 3
  
-      const ROW = 8.5
       const details = [
         ['City',          cap(result.city ?? '—')],
         ['Property type', cap(result.property_type ?? '—')],
@@ -285,79 +304,85 @@ export default function ResultCard({ result, onReset }: Props) {
       details.forEach(([label, value], i) => {
         if (i % 2 === 0) {
           doc.setFillColor(...STRIPE)
-          doc.rect(M, y, INNER, ROW, 'F')
+          doc.rect(M, y, CW, ROW, 'F')
         }
+        const RY = y + ROW * 0.65
         doc.setTextColor(...MUTED)
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(8)
-        doc.text(label, M + 4, y + ROW * 0.65)
+        doc.text(label, M + IP, RY)
         doc.setTextColor(...DARK)
         doc.setFont('helvetica', 'bold')
-        doc.text(value, CX, y + ROW * 0.65)
+        doc.text(value, CX, RY)
         y += ROW
       })
  
-      // ── 7. Comparable sales ───────────────────────────────────────────────
+      // ── 8. Comparable sales ───────────────────────────────────────────────
       if (comparables.length > 0) {
         y += 9
  
         doc.setTextColor(...G)
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(6.5)
-        doc.setCharSpace(1.8)
+        doc.setCharSpace(2.0)
         doc.text('COMPARABLE SALES', M, y)
         doc.setCharSpace(0)
  
         y += 3
         doc.setDrawColor(...G)
-        doc.setLineWidth(0.3)
+        doc.setLineWidth(0.25)
         doc.line(M, y, W - M, y)
-        y += 4
+        y += 3
  
-        // Table header — full green band
+        // Table header — full green band, no rounded corners
         const TH = 8.5
         doc.setFillColor(...G)
-        doc.rect(M, y, INNER, TH, 'F')
+        doc.rect(M, y, CW, TH, 'F')
+ 
         doc.setTextColor(...WHITE)
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(6)
         doc.setCharSpace(0.8)
-        const HY = y + TH * 0.65
-        doc.text('ADDRESS',  M + 4,  HY)
-        doc.text('SOLD',     107,    HY)
-        doc.text('PRICE',    137,    HY)
-        doc.text('SIZE',     163,    HY)
-        doc.text('DIST.',    187,    HY)
+        const HY = y + TH * 0.67
+        doc.text('ADDRESS', COL_ADDR,  HY)
+        doc.text('SOLD',    COL_SOLD,  HY)
+        doc.text('PRICE',   COL_PRICE, HY)
+        doc.text('SIZE',    COL_SIZE,  HY)
+        doc.text('DIST.',   COL_DIST,  HY)
         doc.setCharSpace(0)
         y += TH
  
         comparables.forEach((comp, i) => {
-          if (y > H - 20) return
+          if (y > H - FH - 6) return
           if (i % 2 === 0) {
             doc.setFillColor(...STRIPE)
-            doc.rect(M, y, INNER, ROW, 'F')
+            doc.rect(M, y, CW, ROW, 'F')
           }
           const RY = y + ROW * 0.65
-          const street = comp.street.length > 30 ? comp.street.substring(0, 28) + '…' : comp.street
+          const street = comp.street.length > 28 ? comp.street.substring(0, 26) + '…' : comp.street
+ 
           doc.setTextColor(...DARK)
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(7.5)
-          doc.text(street,                    M + 4, RY)
+          doc.text(street, COL_ADDR, RY)
+ 
           doc.setTextColor(...MUTED)
-          doc.text(comp.sale_date,            107,   RY)
+          doc.text(comp.sale_date, COL_SOLD, RY)
+ 
           doc.setTextColor(...DARK)
           doc.setFont('helvetica', 'bold')
-          doc.text(formatCAD(comp.sale_amount), 137, RY)
+          doc.text(formatCAD(comp.sale_amount), COL_PRICE, RY)
+ 
           doc.setFont('helvetica', 'normal')
           doc.setTextColor(...MUTED)
-          doc.text(`${Math.round(comp.floor_area_sqft)} sf`, 163, RY)
-          doc.text(`${comp.distance_km} km`,  187,   RY)
+          doc.text(`${Math.round(comp.floor_area_sqft)} sf`, COL_SIZE, RY)
+          doc.text(`${comp.distance_km} km`, COL_DIST, RY)
+ 
           y += ROW
         })
       }
  
-      // ── 8. Footer — full width dark green ────────────────────────────────
-      const FH = 13
+      // ── 9. FOOTER — full-width dark green ────────────────────────────────
       doc.setFillColor(...GD)
       doc.rect(0, H - FH, W, FH, 'F')
       const FY = H - FH / 2 + 1.5
@@ -365,7 +390,7 @@ export default function ResultCard({ result, onReset }: Props) {
       doc.setFontSize(6.5)
       doc.setTextColor(185, 228, 210)
       doc.text('lynqestate.com', M, FY)
-      doc.setTextColor(145, 200, 178)
+      doc.setTextColor(148, 198, 175)
       doc.text('For informational purposes only. Does not constitute a formal appraisal.', CX, FY, { align: 'center' })
       doc.setTextColor(185, 228, 210)
       doc.text(`© ${new Date().getFullYear()} LynqEstate`, W - M, FY, { align: 'right' })
@@ -578,4 +603,3 @@ export default function ResultCard({ result, onReset }: Props) {
     </div>
   )
 }
- 
