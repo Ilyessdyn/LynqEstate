@@ -254,8 +254,7 @@ export default function ResultCard({ result, onReset }: Props) {
           doc.setTextColor(...dark)
           doc.text(formatCAD(comp.sale_amount), 135, y + 1)
           doc.setTextColor(...muted)
-          doc.text(`${Math.round(comp.floor_area_sqft).toLocaleString()} sf`, 163, y + 1)
-          doc.text(`${comp.distance_km} km`, 185, y + 1)
+          doc.text(`${Math.round(comp.floor_area_sqft)} sf`, 163, y + 1)        
           y += 9
         })
       }
@@ -340,23 +339,7 @@ export default function ResultCard({ result, onReset }: Props) {
  
         <div style={{ height: 1, background: 'var(--border-subtle)', marginBottom: 24 }} />
  
-        {/* Meta */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap' }}>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Data source</p>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Real Greater Montreal transactions</p>
-          </div>
-          <div style={{ width: 1, background: 'var(--border-subtle)' }} />
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Model</p>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{result.model_version}</p>
-          </div>
-          <div style={{ width: 1, background: 'var(--border-subtle)' }} />
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Currency</p>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{result.currency}</p>
-          </div>
-        </div>
+        
       </div>
  
       {/* ── Comparable Sales Section ── */}
