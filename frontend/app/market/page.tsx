@@ -231,7 +231,7 @@ export default function MarketPage() {
           LynqEstate
         </Link>
         <div style={styles.navLinks}>
-          <Link href="/"       style={styles.navLink}>Estimate</Link>
+          <Link href="/estimate"       style={styles.navLink}>Estimate</Link>
           <Link href="/market" style={{ ...styles.navLink, ...styles.navLinkActive }}>Market</Link>
         </div>
         <Link href="/" style={styles.navCta}>Get estimate →</Link>
