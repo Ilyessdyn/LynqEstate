@@ -88,7 +88,7 @@ export default function LandingPage() {
           margin: '0 auto 48px',
           lineHeight: 1.7,
         }}>
-          LynqEstate gives you an instant, data-driven estimate of your property's market value — free, in seconds, with no agent required.
+          LynqEstate gives you an instant, data-driven estimate of your property's market value — free, in seconds.
         </p>
  
         <Link href="/estimate" style={{
